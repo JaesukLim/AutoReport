@@ -76,15 +76,16 @@
 <body>
 
 <div>
-    <button onclick="createCell('h1')">+타이틀 1</button>
-    <button onclick="createCell('h2')">+타이틀 2</button>
-    <button onclick="createCell('h3')">+타이틀 3</button>
-    <button onclick="createCell('h4')">+타이틀 4</button>
-    <button onclick="createCell('h5')">+타이틀 5</button>
-    <button onclick="createCell('h6')">+타이틀 6</button>
-    <button onclick="createCell('h7')">+타이틀 7</button>
+    <button onclick="createCell('h1')">I. / 수준 1</button>
+    <button onclick="createCell('h2')">1. / 수준 2</button>
+    <button onclick="createCell('h3')">가. / 수준 3</button>
+    <button onclick="createCell('h4')">1) / 수준 4</button>
+    <button onclick="createCell('h5')">가) / 수준 5</button>
+    <button onclick="createCell('h6')">(1) / 수준 6</button>
+    <button onclick="createCell('h7')">(가) / 수준 7</button>
     <button onclick="createCell('text')">+문단</button>
     <button onclick="createCell('image')">+이미지</button>
+    <button onclick="createCell('ref')">+참고문헌</button>
 </div>
 <div>
     <input type="file" id="jsonFileInput" accept=".json" />
@@ -97,7 +98,7 @@
 <script>
     let cells = [];
 
-    function createCell(type, content) {
+    function createCell(type, content, caption) {
         const editor = document.getElementById('editor');
 
         const cell = document.createElement('div');
@@ -150,12 +151,20 @@
             const imagePreview = document.createElement('img');
             imagePreview.style.display = 'none'; // Initially hide the preview
 
+            const input = document.createElement('input');
+            input.id = 'caption';
+            input.type = 'text';
+            input.placeholder = 'Enter text...';
+            input.value = caption || '';
+
             cell.appendChild(fileInput);
             cell.appendChild(pasteButton);
             cell.appendChild(imagePreview);
+            cell.appendChild(input);
 
             if (content) {
                 cell.content = content;
+                input.value = caption;
                 imagePreview.src = content;
                 imagePreview.style.display = 'block'; // Show the preview
             }
@@ -164,7 +173,7 @@
             const input = document.createElement('textarea'); // Use textarea for long text
             input.placeholder = 'Enter text...';
             input.rows = 5; // Set the number of rows as needed
-            input.cols = 50;
+            input.cols = 90;
             input.value = content || '';
 
             input.addEventListener('input', function () {
@@ -183,10 +192,26 @@
 
             const charCount = document.createElement('span');
             charCount.id = 'charCount';
-            charCount.textContent = '0 characters';
+            charCount.textContent = input.value.length + ' characters';
             cell.appendChild(input);
             cell.appendChild(charCount);
 
+        } else if (type === "ref") {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Enter text...';
+            input.value = content || '';
+            input.size = 100;
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    createCell('ref'); // Create a new text cell on Enter key press
+                }
+            });
+            setTimeout(() => {
+                input.focus();
+            }, 10);
+            cell.appendChild(input);
         } else {
             const input = document.createElement('input');
             input.type = 'text';
@@ -311,56 +336,6 @@ function handlePasteImage(cell) {
         });
     }
 
-   function saveData() {
-    const data = {
-        id: 'user_id', // You can replace this with the actual user ID
-        contents: []
-    };
-
-    cells.forEach(function (cell) {
-        const type = cell.id.split('_')[0];
-
-        if (type === 'image') {
-            const imagePreview = cell.querySelector('img');
-            const content = cell.content;
-            data.contents.push({
-                type: type,
-                content: content
-            });
-        } else if (type === 'text') {
-            const input = cell.querySelector('textarea'); // Update to 'textarea'
-            const content = input ? input.value : ''; // Check if input is not null
-            data.contents.push({
-                type: type,
-                content: content
-            });
-        } else {
-            const input = cell.querySelector('input');
-            const content = input ? input.value : '';
-            data.contents.push({
-                type: type,
-                content: content
-            });
-        }
-    });
-
-    // You can now send the 'data' object to your server or perform further actions
-    console.log(data);
-}
-
-
-    function getBase64Image(cell) {
-        const image = cell.querySelector('img');
-        const canvas = document.createElement('canvas');
-        canvas.width = image.width;
-        canvas.height = image.height;
-
-        const ctx = canvas.getContext('2d');
-        ctx.drawImage(image, 0, 0, image.width, image.height);
-
-        const dataUrl = canvas.toDataURL('image/png');
-        return dataUrl;
-    }
 
     function updateCharCount(cell, input) {
     const charCount = cell.querySelector('#charCount');
@@ -381,11 +356,14 @@ function downloadJson() {
             const type = cell.id.split('_')[0];
 
             if (type === 'image') {
-                const imagePreview = cell.querySelector('img');
-                const content = cell.dataset.originalBase64 || '';
+                const caption_box = cell.querySelector('#caption');
+                const caption = caption_box ? caption_box.value : '';
+                const content = cell.content || '';
+                console.log(caption);
                 data.contents.push({
                     type: type,
-                    content: content
+                    content: content,
+                    caption: caption
                 });
             } else if (type === 'text') {
                 const input = cell.querySelector('textarea'); // Update to 'textarea'
@@ -429,10 +407,14 @@ function downloadJson() {
                 const jsonString = e.target.result;
                 const data = JSON.parse(jsonString);
 
-                clearEditor();
+                //clearEditor();
 
                 data.contents.forEach(function (content) {
-                    createCell(content.type, content.content);
+                    if (content.type === 'image') {
+                        createCell(content.type, content.content, content.caption);
+                    } else {
+                        createCell(content.type, content.content);
+                    }
                 });
             };
 
