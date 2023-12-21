@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Editor</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+
+    button {
+        padding: 5px 10px;
+        margin: 5px;
+        cursor: pointer;
+    }
+
+    .cell {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 10px;
+        overflow: hidden; /* Fix for button visibility */
+        position: relative;
+    }
+
+    .cell button {
+        position: absolute;
+        top: 5px;
+    }
+
+    .cell #removeButton {
+        right: 5px;
+    }
+
+    .cell #upButton {
+        right: 125px; /* Adjust the spacing between buttons */
+    }
+
+    .cell #downButton {
+        right: 55px; /* Adjust the spacing between buttons */
+    }
+
+    .cell #pasteButton {
+        right: 175px; /* Adjust the spacing between buttons */
+    }
+
+    .cell img {
+        max-width: 100%;
+        max-height: 150px;
+        display: block;
+        margin-top: 10px;
+    }
+
+    #editor {
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        min-height: 100px;
+    }
+
+    #editor button {
+        margin: 5px;
+    }
+
+    #editor .cell {
+        background-color: #fff;
+    }
+
+    #editor .cell:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+</style>
+
+
+</head>
+<body>
+
+<div>
+    <button onclick="createCell('h1')">+타이틀 1</button>
+    <button onclick="createCell('h2')">+타이틀 2</button>
+    <button onclick="createCell('h3')">+타이틀 3</button>
+    <button onclick="createCell('h4')">+타이틀 4</button>
+    <button onclick="createCell('h5')">+타이틀 5</button>
+    <button onclick="createCell('h6')">+타이틀 6</button>
+    <button onclick="createCell('h7')">+타이틀 7</button>
+    <button onclick="createCell('text')">+문단</button>
+    <button onclick="createCell('image')">+이미지</button>
+</div>
+<div>
+    <input type="file" id="jsonFileInput" accept=".json" />
+    <button onclick="loadJson()">Load JSON</button>
+</div>
+<div id="editor"></div>
+
+<button onclick="downloadJson()">Download JSON</button>
+
+<script>
+    let cells = [];
+
+    function createCell(type, content) {
+        const editor = document.getElementById('editor');
+
+        const cell = document.createElement('div');
+        cell.id = type + '_' + Math.random().toString(36).substr(2, 9);
+        cell.classList.add('cell');
+
+        const removeButton = document.createElement('button');
+        removeButton.id = 'removeButton';
+        removeButton.textContent = 'x';
+        removeButton.onclick = function () {
+            removeCell(cell);
+        };
+
+        const upButton = document.createElement('button');
+        upButton.id = 'upButton';
+        upButton.textContent = 'up';
+        upButton.onclick = function () {
+            moveCellUp(cell);
+        };
+
+        const downButton = document.createElement('button');
+        downButton.id = 'downButton';
+        downButton.textContent = 'down';
+        downButton.onclick = function () {
+            moveCellDown(cell);
+        };
+        const label = document.createElement('label');
+        label.textContent = type + ' : ';
+
+        cell.appendChild(label);
+        cell.appendChild(removeButton);
+        cell.appendChild(upButton);
+        cell.appendChild(downButton);
+
+        if (type === 'image') {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.addEventListener('change', function () {
+                handleImageUpload(fileInput);
+            });
+
+            const pasteButton = document.createElement('button');
+            pasteButton.id = 'pasteButton';
+            pasteButton.textContent = 'Paste Image';
+            pasteButton.onclick = function () {
+                handlePasteImage(cell);
+            };
+
+            const imagePreview = document.createElement('img');
+            imagePreview.style.display = 'none'; // Initially hide the preview
+
+            cell.appendChild(fileInput);
+            cell.appendChild(pasteButton);
+            cell.appendChild(imagePreview);
+
+            if (content) {
+                cell.content = content;
+                imagePreview.src = content;
+                imagePreview.style.display = 'block'; // Show the preview
+            }
+
+        } else if (type === 'text') {
+            const input = document.createElement('textarea'); // Use textarea for long text
+            input.placeholder = 'Enter text...';
+            input.rows = 5; // Set the number of rows as needed
+            input.cols = 50;
+            input.value = content || '';
+
+            input.addEventListener('input', function () {
+                updateCharCount(cell, input);
+            });
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    createCell('text'); // Create a new text cell on Enter key press
+                }
+            });
+
+            setTimeout(() => {
+                input.focus();
+            }, 10);
+
+            const charCount = document.createElement('span');
+            charCount.id = 'charCount';
+            charCount.textContent = '0 characters';
+            cell.appendChild(input);
+            cell.appendChild(charCount);
+
+        } else {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Enter text...';
+            input.value = content || '';
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    createCell('text'); // Create a new text cell on Enter key press
+                }
+            });
+            cell.appendChild(input);
+        }
+
+        editor.appendChild(cell);
+        cells.push(cell);
+        updateEditor();
+    }
+
+    function removeCell(cell) {
+        const index = cells.indexOf(cell);
+        if (index !== -1) {
+            cells.splice(index, 1);
+            cell.remove();
+            updateEditor();
+        }
+    }
+
+    function moveCellUp(cell) {
+        const index = cells.indexOf(cell);
+        if (index > 0) {
+            const temp = cells[index];
+            cells[index] = cells[index - 1];
+            cells[index - 1] = temp;
+
+            updateEditor();
+        }
+    }
+
+    function moveCellDown(cell) {
+        const index = cells.indexOf(cell);
+        if (index < cells.length - 1) {
+            const temp = cells[index];
+            cells[index] = cells[index + 1];
+            cells[index + 1] = temp;
+
+            updateEditor();
+        }
+    }
+
+    function handleImageUpload(fileInput) {
+    const cell = fileInput.closest('.cell');
+    const imagePreview = cell.querySelector('img');
+
+    const file = fileInput.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const imageDataUrl = e.target.result;
+
+            // Store the original base64 string in a data attribute
+            cell.content = imageDataUrl
+
+            displayImagePreview(imagePreview, imageDataUrl);
+            updateEditor();
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function handlePasteImage(cell) {
+    document.onpaste = function (pasteEvent) {
+        // Check if clipboard data contains items
+        if (pasteEvent.clipboardData && pasteEvent.clipboardData.items) {
+            // Consider the first item
+            var item = pasteEvent.clipboardData.items[0];
+
+            if (item.type.indexOf("image") === 0) {
+                // Get the image blob
+                var blob = item.getAsFile();
+
+                // Create a FileReader
+                var reader = new FileReader();
+
+                // Set the onload event handler
+                reader.onload = function (event) {
+                    // Get the data URL of the image
+                    let imageDataUrl = event.target.result;
+
+                    // Store the original base64 string in a data attribute
+                    cell.content = imageDataUrl;
+
+                    // Get the image preview element
+                    const imagePreview = cell.querySelector('img');
+
+                    // Display the image preview
+                    displayImagePreview(imagePreview, imageDataUrl);
+
+                    // Update the editor
+                    updateEditor();
+                };
+
+                // Read the blob as a data URL
+                reader.readAsDataURL(blob);
+            }
+        }
+    };
+}
+
+    function displayImagePreview(imagePreview, imageDataUrl) {
+        imagePreview.src = imageDataUrl;
+        imagePreview.style.display = 'block'; // Show the preview
+    }
+
+    function updateEditor() {
+        const editor = document.getElementById('editor');
+        // Clear the editor
+        editor.innerHTML = '';
+        // Rebuild the editor content based on the updated order
+        cells.forEach(function (cell) {
+            editor.appendChild(cell);
+        });
+    }
+
+   function saveData() {
+    const data = {
+        id: 'user_id', // You can replace this with the actual user ID
+        contents: []
+    };
+
+    cells.forEach(function (cell) {
+        const type = cell.id.split('_')[0];
+
+        if (type === 'image') {
+            const imagePreview = cell.querySelector('img');
+            const content = cell.content;
+            data.contents.push({
+                type: type,
+                content: content
+            });
+        } else if (type === 'text') {
+            const input = cell.querySelector('textarea'); // Update to 'textarea'
+            const content = input ? input.value : ''; // Check if input is not null
+            data.contents.push({
+                type: type,
+                content: content
+            });
+        } else {
+            const input = cell.querySelector('input');
+            const content = input ? input.value : '';
+            data.contents.push({
+                type: type,
+                content: content
+            });
+        }
+    });
+
+    // You can now send the 'data' object to your server or perform further actions
+    console.log(data);
+}
+
+
+    function getBase64Image(cell) {
+        const image = cell.querySelector('img');
+        const canvas = document.createElement('canvas');
+        canvas.width = image.width;
+        canvas.height = image.height;
+
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(image, 0, 0, image.width, image.height);
+
+        const dataUrl = canvas.toDataURL('image/png');
+        return dataUrl;
+    }
+
+    function updateCharCount(cell, input) {
+    const charCount = cell.querySelector('#charCount');
+    charCount.textContent = input.value.length + ' characters';
+}
+
+function downloadJson() {
+        const fileName = prompt('파일 이름을 작성해주세요 (확장자 X)');
+        const name = prompt('이름을 작성해주세요');
+        if (!fileName || !name) return; // User clicked cancel
+
+        const data = {
+            id: name, // You can replace this with the actual user ID
+            contents: []
+        };
+
+        cells.forEach(function (cell) {
+            const type = cell.id.split('_')[0];
+
+            if (type === 'image') {
+                const imagePreview = cell.querySelector('img');
+                const content = cell.dataset.originalBase64 || '';
+                data.contents.push({
+                    type: type,
+                    content: content
+                });
+            } else if (type === 'text') {
+                const input = cell.querySelector('textarea'); // Update to 'textarea'
+                const content = input ? input.value : ''; // Check if input is not null
+                data.contents.push({
+                    type: type,
+                    content: content
+                });
+            } else {
+                const input = cell.querySelector('input');
+                const content = input ? input.value : '';
+                data.contents.push({
+                    type: type,
+                    content: content
+                });
+            }
+        });
+
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName + '_' + name + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        URL.revokeObjectURL(url);
+    }
+
+    function loadJson() {
+        const jsonFileInput = document.getElementById('jsonFileInput');
+        const file = jsonFileInput.files[0];
+
+        if (file) {
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const jsonString = e.target.result;
+                const data = JSON.parse(jsonString);
+
+                clearEditor();
+
+                data.contents.forEach(function (content) {
+                    createCell(content.type, content.content);
+                });
+            };
+
+            reader.readAsText(file);
+        }
+    }
+
+    function clearEditor() {
+        const editor = document.getElementById('editor');
+        editor.innerHTML = '';
+        cells = [];
+    }
+</script>
+
+</body>
+</html>
