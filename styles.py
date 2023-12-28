@@ -8,7 +8,6 @@ from docx.shared import Pt, Inches
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 
 os.environ["no_proxy"] = "localhost,127.0.0.1,::1"
-doc = Document('FinalReport_empty.docx')
 
 # h1_counter = 0
 # h2_counter = 1  #1.
@@ -24,6 +23,7 @@ previous_level = 0
 image_counter = 1
 table_counter = 1
 ref_counter = 1
+doc = Document('FinalReport_empty.docx')
 def get_current_header(level, counter):
     if level == 1:
         return str(counter) + '. '
@@ -40,6 +40,7 @@ def get_current_header(level, counter):
 
 
 def generate_metadata(file_name, school_name, student_names, field_name, mentor_name, start_date, end_date, title, title_eng, keywords):
+    global doc
     doc.tables[0].rows[0].cells[2].paragraphs[0].text = school_name
     doc.tables[0].rows[0].cells[4].paragraphs[0].text = student_names
     doc.tables[0].rows[1].cells[2].paragraphs[0].text = field_name
@@ -49,10 +50,11 @@ def generate_metadata(file_name, school_name, student_names, field_name, mentor_
     doc.tables[0].rows[4].cells[2].paragraphs[0].text = title_eng
     doc.tables[0].rows[5].cells[1].paragraphs[0].text = keywords
     doc.save(file_name + '.docx')
+    doc = Document('FinalReport_empty.docx')
     print("Done")
 
 def parse_json(file):
-    global previous_level, image_counter, ref_counter, counters
+    global previous_level, image_counter, ref_counter, counters, doc
     with open(file, 'r', encoding='utf-8') as f:
         data = json.load(f)
     print(data)

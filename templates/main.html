@@ -75,6 +75,13 @@
 </head>
 <body>
 
+
+<div>
+    <input type="file" id="jsonFileInput" accept=".json" />
+    <button onclick="loadJson()">Load JSON</button>
+</div>
+<div id="editor"></div>
+
 <div>
     <button onclick="createCell('h1')">I. / 수준 1</button>
     <button onclick="createCell('h2')">1. / 수준 2</button>
@@ -87,11 +94,6 @@
     <button onclick="createCell('image')">+이미지</button>
     <button onclick="createCell('ref')">+참고문헌</button>
 </div>
-<div>
-    <input type="file" id="jsonFileInput" accept=".json" />
-    <button onclick="loadJson()">Load JSON</button>
-</div>
-<div id="editor"></div>
 
 <button onclick="downloadJson()">Download JSON</button>
 
