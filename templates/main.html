@@ -69,6 +69,17 @@
     #editor .cell:nth-child(even) {
         background-color: #f2f2f2;
     }
+
+    input,
+    textarea {
+        font-family: Arial, sans-serif;
+        font-size: 20px;
+        box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    }
+
+    textarea {
+        resize: vertical; /* Allow vertical resizing of textarea */
+    }
 </style>
 
 
@@ -428,6 +439,19 @@ function downloadJson() {
         const editor = document.getElementById('editor');
         editor.innerHTML = '';
         cells = [];
+    }
+
+    document.addEventListener('input', function (event) {
+        const target = event.target;
+
+        if (target.tagName.toLowerCase() === 'textarea') {
+            adjustTextareaHeight(target);
+        }
+    });
+
+    function adjustTextareaHeight(textarea) {
+        textarea.style.height = 'auto'; // Reset height to auto
+        textarea.style.height = (textarea.scrollHeight + 2) + 'px'; // Set the height based on content
     }
 </script>
 
