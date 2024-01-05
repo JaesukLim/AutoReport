@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Login Page</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 50px;
+        }
+
+        #login-form {
+            max-width: 300px;
+            margin: auto;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px;
+            margin: 8px 0;
+            display: inline-block;
+            border: 1px solid #ccc;
+            box-sizing: border-box;
+        }
+
+        button {
+            background-color: #4CAF50;
+            color: white;
+            padding: 10px 15px;
+            margin: 8px 0;
+            border: none;
+            cursor: pointer;
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+    <div id="login-form">
+        <h2>Login</h2>
+        <form id="loginForm">
+            <label for="nickname">이름:</label>
+            <input type="text" id="nickname" name="nickname" required>
+
+            <label for="password">비밀번호:</label>
+            <input type="text" id="password" name="password" required>
+
+            <button type="button" onclick="submitForm()">Login</button>
+        </form>
+    </div>
+
+    <script>
+        function submitForm() {
+            const nickname = document.getElementById("nickname").value;
+            const password = document.getElementById("password").value;
+
+            const data = {
+                nickname: nickname,
+                password: password
+            };
+
+            fetch('/register', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.message === 'Success') {
+                    fetch('/login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify(data)
+            }).then(loginResponse => {
+                        if (loginResponse.redirected) {
+                            window.location.href = loginResponse.url; // Redirect to the play page
+                        } else {
+                            alert('Login failed.');
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                    });
+                } else {
+                    alert(result.message);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        }
+    </script>
+</body>
+</html>

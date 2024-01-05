@@ -55,7 +55,8 @@
         padding: 10px;
         border: 1px solid #ccc;
         background-color: #f9f9f9;
-        min-height: 100px;
+        height: 80vh;
+        overflow-y: auto;
     }
 
     #editor button {
@@ -80,13 +81,38 @@
     textarea {
         resize: vertical; /* Allow vertical resizing of textarea */
     }
+
+    #guideline {
+        width: 45%;
+        height: 100%
+        padding: 10px;
+        background-color: #f2f2f2;
+        overflow: auto;
+        float: left;
+        text-align: center;
+    }
+
+    #main {
+        width: 50%;
+        height: 100%;
+        flex-grow: 1;
+        padding: 10px;
+        overflow-y: auto;
+        float: left;
+    }
+
+    #cellNumber {
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        font-size: 20px;
+    }
 </style>
 
 
 </head>
 <body>
 
-
+<div id="main">
 <div>
     <input type="file" id="jsonFileInput" accept=".json" />
     <button onclick="loadJson()">Load JSON</button>
@@ -107,9 +133,15 @@
 </div>
 
 <button onclick="downloadJson()">Download JSON</button>
+</div>
 
+<div id="guideline">
+<h1> 최종보고서 작성 가이드라인 </h1>
+
+</div>
 <script>
     let cells = [];
+    let cellCounter = 0;
 
     function createCell(type, content, caption) {
         const editor = document.getElementById('editor');
@@ -117,6 +149,11 @@
         const cell = document.createElement('div');
         cell.id = type + '_' + Math.random().toString(36).substr(2, 9);
         cell.classList.add('cell');
+
+        const cellNumber = document.createElement('span');
+        cellNumber.textContent = '[' + (cells.length + 1) + '] ';
+        cellNumber.id = 'cellNumber'
+        cell.appendChild(cellNumber);
 
         const removeButton = document.createElement('button');
         removeButton.id = 'removeButton';
@@ -205,7 +242,7 @@
 
             const charCount = document.createElement('span');
             charCount.id = 'charCount';
-            charCount.textContent = input.value.length + ' characters';
+            charCount.textContent = input.value.length + ' 글자';
             cell.appendChild(input);
             cell.appendChild(charCount);
 
@@ -248,10 +285,20 @@
         const index = cells.indexOf(cell);
         if (index !== -1) {
             cells.splice(index, 1);
+            updateCellNumbers();
             cell.remove();
             updateEditor();
         }
     }
+
+    function updateCellNumbers() {
+    cells.forEach(function (cell, index) {
+        const cellNumber = cell.querySelector('span');
+        if (cellNumber) {
+            cellNumber.textContent = 'Cell ' + (index + 1) + ': ';
+        }
+    });
+}
 
     function moveCellUp(cell) {
         const index = cells.indexOf(cell);
@@ -453,6 +500,8 @@ function downloadJson() {
         textarea.style.height = 'auto'; // Reset height to auto
         textarea.style.height = (textarea.scrollHeight + 2) + 'px'; // Set the height based on content
     }
+
+
 </script>
 
 </body>

@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>School Dashboard</title>
+    <!-- Include any additional CSS libraries or stylesheets here -->
+    <style>
+        /* Add your custom styles here */
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+            display: flex;
+        }
+
+        #sidebar {
+            width: 200px;
+            background-color: #f1f1f1;
+            padding: 20px;
+        }
+
+        #content {
+            flex-grow: 1;
+            padding: 20px;
+        }
+
+        #school-list {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        .school-item {
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+
+        .add-school-btn {
+            margin-top: 10px;
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        #add-school-form {
+            display: none;
+            margin-top: 20px;
+        }
+
+        .add-student-form {
+            margin-top: 10px;
+        }
+
+        .add-student-btn {
+            margin-top: 10px;
+            padding: 5px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <div id="sidebar">
+        <ul id="school-list"></ul>
+        <button class="add-school-btn" onclick="showAddSchoolForm()">Add School</button>
+    </div>
+    <div id="content">
+        <div id="add-school-form">
+            <form id="school-form">
+                <label for="school-name">학교명:</label>
+                <input type="text" id="school-name" required>
+                <br>
+                <label for="field">분야:</label>
+                <input type="text" id="field" required>
+                <br>
+                <div id="student-list" class="add-student-form">
+                    <!-- Dynamic input fields for students will be added here -->
+                </div>
+                <button class="add-student-btn" onclick="addStudentField()">Add Student</button>
+                <br>
+                <input type="submit" value="Submit">
+            </form>
+        </div>
+    </div>
+
+    <!-- Include any additional JS libraries or scripts here -->
+    <script>
+        // Function to fetch schools and update the list
+        async function fetchSchools(mentor) {
+            const response = await fetch('/schools', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ mentor }),
+            });
+
+            const data = await response.json();
+            const schoolList = document.getElementById('school-list');
+            schoolList.innerHTML = '';
+
+            data.forEach(school => {
+                const schoolItem = document.createElement('li');
+                schoolItem.classList.add('school-item');
+                schoolItem.textContent = school.name;
+                schoolItem.addEventListener('click', () => showSchoolDetails(school));
+                schoolList.appendChild(schoolItem);
+            });
+        }
+
+        // Function to show the "Add School" form
+        function showAddSchoolForm() {
+            document.getElementById('add-school-form').style.display = 'block';
+        }
+
+        // Function to add dynamic student input fields
+        function addStudentField() {
+            const studentList = document.getElementById('student-list');
+
+            const studentInput = document.createElement('div');
+            studentInput.innerHTML = `
+                <label for="student-number">학번:</label>
+                <input type="text" name="student-number" required>
+                <label for="student-name">이름:</label>
+                <input type="text" name="student-name" required>
+            `;
+            studentList.appendChild(studentInput);
+        }
+
+        // Function to handle form submission (you can customize this)
+        document.getElementById('school-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            // Add logic to handle form submission (e.g., send data to the server)
+            // ...
+
+            // After successful submission, you may want to hide the form
+            document.getElementById('add-school-form').style.display = 'none';
+        });
+
+        // Function to show school details (you can customize this)
+        function showSchoolDetails(school) {
+            // Add logic to display school details (e.g., fetch and display additional information)
+            // ...
+            alert(`Selected School: ${school.name}`);
+        }
+
+        // Initial fetch when the page loads (you may want to call this with a specific mentor value)
+        fetchSchools('YourMentorName');
+    </script>
+</body>
+</html>
