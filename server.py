@@ -165,13 +165,13 @@ def get_class_report(mentor_uuid):
     run = doc.tables[0].rows[2].cells[2].paragraphs[0].add_run(metadata['class_info']['mentorName'])
     run.font.size = Pt(12)
     for i in range(1, 7):
-        doc.tables[1].rows[i].cells[1].paragraphs[0].text = metadata['class_info']['classOverview' + str(i)]
-        doc.tables[1].rows[i].cells[2].paragraphs[0].text = metadata['class_info']['classDetails' + str(i)]
-    doc.tables[1].rows[7].cells[1].paragraphs[0].text = metadata['class_info']['classOverviewOffline']
-    doc.tables[1].rows[7].cells[2].paragraphs[0].text = metadata['class_info']['classDetailsOffline']
+        doc.tables[1].rows[i].cells[1].paragraphs[0].text = metadata['class_info']['classOverview' + str(i)].replace('\r\n', '\n')
+        doc.tables[1].rows[i].cells[2].paragraphs[0].text = metadata['class_info']['classDetails' + str(i)].replace('\r\n', '\n')
+    doc.tables[1].rows[7].cells[1].paragraphs[0].text = metadata['class_info']['classOverviewOffline'].replace('\r\n', '\n')
+    doc.tables[1].rows[7].cells[2].paragraphs[0].text = metadata['class_info']['classDetailsOffline'].replace('\r\n', '\n')
 
-    doc.tables[2].rows[1].cells[1].paragraphs[0].text = metadata['class_info']['teamTopic']
-    doc.tables[2].rows[2].cells[1].paragraphs[0].text = metadata['class_info']['individualInterest']
+    doc.tables[2].rows[1].cells[1].paragraphs[0].text = metadata['class_info']['teamTopic'].replace('\r\n', '\n')
+    doc.tables[2].rows[2].cells[1].paragraphs[0].text = metadata['class_info']['individualInterest'].replace('\r\n', '\n')
 
     cur_row = 2
     for student in metadata['students']:

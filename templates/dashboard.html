@@ -181,7 +181,16 @@
                                 <td><input type="text" id="classOverview6" name="classOverview6"></td>
                                 <td><textarea id="classDetails6" name="classDetails6"></textarea></td>
                             </tr>
-                            <!-- Repeat for 2차시 to 6차시 -->
+                            <tr>
+                                <td>7차시</td>
+                                <td><input type="text" id="classOverview7" name="classOverview7"></td>
+                                <td><textarea id="classDetails7" name="classDetails8"></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>8차시</td>
+                                <td><input type="text" id="classOverview8" name="classOverview8"></td>
+                                <td><textarea id="classDetails8" name="classDetails8"></textarea></td>
+                            </tr>
                             <tr>
                                 <td>오프라인</td>
                                 <td><input type="text" id="classOverviewOffline" name="classOverviewOffline"></td>
@@ -392,9 +401,9 @@
                     for (let i = 1; i <= 9; i++) {
                         tableRow.innerHTML += `
                             <td>
-                                <input type="radio" id="attendance-${studentNumber}-${i}" name="attendance-${studentNumber}-${i}" value="출석"> 출석 <br>
-                                <input type="radio" id="attendance-${studentNumber}-${i}" name="attendance-${studentNumber}-${i}" value="결석"> 결석 <br>
-                                <input type="radio" id="attendance-${studentNumber}-${i}" name="attendance-${studentNumber}-${i}" value="지각"> 지각 <br>
+                                <input type="radio" id="attendance-${studentNumber}-${i}-출석" name="attendance-${studentNumber}-${i}" value="출석"> 출석 <br>
+                                <input type="radio" id="attendance-${studentNumber}-${i}-결석" name="attendance-${studentNumber}-${i}" value="결석"> 결석 <br>
+                                <input type="radio" id="attendance-${studentNumber}-${i}-지각" name="attendance-${studentNumber}-${i}" value="지각"> 지각 <br>
                                 <select id="reason-${studentNumber}-${i}" name="reason-${studentNumber}-${i}">
                                     <option value="없음">없음</option>
                                     <option value="개인">개인</option>
@@ -432,7 +441,8 @@
                     if (Object.keys(response.attendance).length != 0) {
                         Object.keys(response.attendance).forEach(key => {
                             if (key.split('-')[0] === "attendance") {
-                                document.getElementById(key).checked = true;
+                                document.getElementById(key + '-' + response.attendance[key]).checked = true;
+                                console.log(document.getElementById(key + '-' + response.attendance[key]));
                             } else if (key.split('-')[0] === "reason" || key.split('-')[0] === "time") {
                                 document.getElementById(key).value = response.attendance[key];
                             }
