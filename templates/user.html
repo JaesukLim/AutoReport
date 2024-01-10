@@ -16,6 +16,11 @@
             margin: auto;
         }
 
+        #registerForm {
+            max-width: 300px;
+            margin: auto;
+        }
+
         input {
             width: 100%;
             padding: 10px;
@@ -44,13 +49,39 @@
             <input type="text" id="nickname" name="nickname" required>
 
             <label for="password">비밀번호:</label>
-            <input type="text" id="password" name="password" required>
+            <input type="password" id="password" name="password" required>
 
             <button type="button" onclick="submitForm()">Login</button>
         </form>
+        <button onclick="showRegister()">멘토 등록</button>
+
     </div>
+    <div id="registerForm" style="display: none;">
+        <form id="registration" action="/register" method="post">
+            <label for="registerName">이름:</label>
+            <input type="text" id="registerName" name="nickname" required>
+
+            <label for="registerPassword">비밀번호:</label>
+            <input type="password" id="registerPassword" name="password" required>
+
+            <label for="registerPasswordCheck">비밀번호 확인:</label>
+            <input type="password" id="registerPasswordCheck" name="passwordCheck" required>
+
+            <input type="submit" value="등록하기">
+            <button onclick="collapseRegister()">취소</button>
+        </form>
+    </div>
+</body>
 
     <script>
+        function showRegister() {
+            document.getElementById("registerForm").style.display = 'block';
+        }
+
+        function collapseRegister() {
+            document.getElementById("registerForm").style.display = 'none';
+        }
+
         function submitForm() {
             const nickname = document.getElementById("nickname").value;
             const password = document.getElementById("password").value;
@@ -60,40 +91,33 @@
                 password: password
             };
 
-            fetch('/register', {
+            fetch('/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify(data)
             })
-            .then(response => response.json())
-            .then(result => {
-                if (result.message === 'Success') {
-                    fetch('/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(data)
-            }).then(loginResponse => {
-                        if (loginResponse.redirected) {
-                            window.location.href = loginResponse.url; // Redirect to the play page
-                        } else {
-                            alert('Login failed.');
-                        }
-                    })
-                    .catch(error => {
-                        console.error('Error:', error);
-                    });
+            .then(loginResponse => {
+                if (loginResponse.redirected) {
+                    window.location.href = loginResponse.url; // Redirect to the play page
                 } else {
-                    alert(result.message);
+                    alert('로그인에 실패했습니다');
                 }
             })
-            .catch(error => {
-                console.error('Error:', error);
-            });
         }
+
+        document.addEventListener('submit', function(event) {
+            event.preventDefault();
+            fetch(event.target.action, {
+                method: 'POST',
+                body: new FormData(event.target)
+            }).then(response => response.json())
+                .then(response => {
+                    alert(response.message);
+                })
+
+        })
     </script>
 </body>
 </html>

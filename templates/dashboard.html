@@ -16,6 +16,7 @@
 
         #sidebar {
             width: 200px;
+            height: 80vh;
             background-color: #f1f1f1;
             padding: 20px;
         }
@@ -61,6 +62,49 @@
             border: none;
             cursor: pointer;
         }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+        }
+
+        table, th, td {
+            border: 1px solid #ddd;
+        }
+
+        th, td {
+            padding: 8px;
+            text-align: left;
+        }
+
+        #teamTopic, #individualInterest {
+            width: 100%;
+            height: 80px;
+        }
+
+        img {
+            max-width: 100%;
+            height: auto;
+            margin-bottom: 10px;
+        }
+
+        .save-btn {
+            padding: 10px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .save-btn:hover {
+            background-color: #45a049;
+        }
+
+        #school-info {
+            display: none;
+        }
     </style>
 </head>
 <body>
@@ -70,33 +114,177 @@
     </div>
     <div id="content">
         <div id="add-school-form">
-            <form id="school-form">
+            <form id="school-form" method="post" onsubmit="submitForm(event)">
                 <label for="school-name">학교명:</label>
-                <input type="text" id="school-name" required>
+                <input type="text" id="school-name" name="school-name" required>
                 <br>
                 <label for="field">분야:</label>
-                <input type="text" id="field" required>
+                <input type="text" id="field" name="field" required>
                 <br>
                 <div id="student-list" class="add-student-form">
                     <!-- Dynamic input fields for students will be added here -->
                 </div>
-                <button class="add-student-btn" onclick="addStudentField()">Add Student</button>
+                <button type="button" class="add-student-btn" onclick="addStudentField()">Add Student</button>
                 <br>
                 <input type="submit" value="Submit">
             </form>
         </div>
+            <div id="school-info">
+                <button id="collapseButton" onclick="collapseSchoolInfo()"> < 접기</button>
+                <button id="metadataSectionButton" onclick="collapseMetadataSection()"> 수업 정보 접기 </button>
+                <section id="classMetadataSection">
+                    <h2><span id="headerSchoolName"></span></h2>
+                    <form id="classMetadataForm" action="/metadata" method="post">
+                        <input type="hidden" id="schoolName" name="schoolName" required>
+
+                        <label for="className">분야 (팀 이름):</label>
+                        <input type="text" id="className" name="className" required>
+                        <br>
+                        <label for="mentorName">멘토 이름:</label>
+                        <input type="text" id="mentorName" name="mentorName" placeholder="XX대학교 XX과 XXX멘토" required>
+
+                        <h3>Teaching Plan</h3>
+                        <table>
+                            <tr>
+                                <th>차시</th>
+                                <th>수업 개요</th>
+                                <th>세부 내용</th>
+                            </tr>
+                            <!-- Repeat rows for each class -->
+                            <tr>
+                                <td>1차시</td>
+                                <td><input type="text" id="classOverview1" name="classOverview1"></td>
+                                <td><textarea id="classDetails1" name="classDetails1"></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>2차시</td>
+                                <td><input type="text" id="classOverview2" name="classOverview2"></td>
+                                <td><textarea id="classDetails2" name="classDetails2"></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>3차시</td>
+                                <td><input type="text" id="classOverview3" name="classOverview3"></td>
+                                <td><textarea id="classDetails3" name="classDetails3"></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>4차시</td>
+                                <td><input type="text" id="classOverview4" name="classOverview4"></td>
+                                <td><textarea id="classDetails4" name="classDetails4"></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>5차시</td>
+                                <td><input type="text" id="classOverview5" name="classOverview5"></td>
+                                <td><textarea id="classDetails5" name="classDetails5"></textarea></td>
+                            </tr>
+                            <tr>
+                                <td>6차시</td>
+                                <td><input type="text" id="classOverview6" name="classOverview6"></td>
+                                <td><textarea id="classDetails6" name="classDetails6"></textarea></td>
+                            </tr>
+                            <!-- Repeat for 2차시 to 6차시 -->
+                            <tr>
+                                <td>오프라인</td>
+                                <td><input type="text" id="classOverviewOffline" name="classOverviewOffline"></td>
+                                <td><textarea id="classDetailsOffline" name="classDetailsOffline"></textarea></td>
+                            </tr>
+                        </table>
+                        <label for="teamTopic">팀 주제:</label>
+                        <textarea id="teamTopic" name="teamTopic" required></textarea>
+
+                        <label for="individualInterest">개별 관심 분야:</label>
+                        <textarea id="individualInterest" name="individualInterest" required></textarea>
+
+                        <input type="submit" class="save-btn" value="수업 정보 저장하기">
+                    </form>
+                </section>
+
+                <section>
+                    <h2>출결 현황</h2>
+                    <form id="AttendanceForm" method="post">
+
+                        <input type="hidden" id="schoolNameAttendance" name="schoolName">
+                        <table id="AttendanceTable">
+
+                        </table>
+
+                        <input type="submit" class="save-btn" value="출결 저장하기">
+                    </form>
+                </section>
+
+                <section>
+                    <h2>수업 사진</h2>
+                    <form id="classScreenshotForm">
+                        <div class="image-cell">
+                            <label for="fileInput1">1차시:</label>
+                            <input type="file" accept="image/*" name="screenshot1" id="fileInput1" onchange="previewImage(1)">
+                            <button type="button" onclick="setActiveCell(1)">이미지 붙여넣기</button>
+                            <div id="preview1" class="image-preview"></div>
+                        </div>
+                        <div class="image-cell">
+                            <label for="fileInput2">2차시:</label>
+                            <input type="file" accept="image/*" name="screenshot2" id="fileInput2" onchange="previewImage(2)">
+                            <button type="button" onclick="setActiveCell(2)">이미지 붙여넣기</button>
+                            <div id="preview2" class="image-preview"></div>
+                        </div>
+                        <div class="image-cell">
+                            <label for="fileInput3">3차시:</label>
+                            <input type="file" accept="image/*" name="screenshot3" id="fileInput3" onchange="previewImage(3)">
+                            <button type="button" onclick="setActiveCell(3)">이미지 붙여넣기</button>
+                            <div id="preview3" class="image-preview"></div>
+                        </div>
+                        <div class="image-cell">
+                            <label for="fileInput3">4차시:</label>
+                            <input type="file" accept="image/*" name="screenshot4" id="fileInput4" onchange="previewImage(4)">
+                            <button type="button" onclick="setActiveCell(4)">이미지 붙여넣기</button>
+                            <div id="preview4" class="image-preview"></div>
+                        </div>
+                        <div class="image-cell">
+                            <label for="fileInput3">5차시:</label>
+                            <input type="file" accept="image/*" name="screenshot5" id="fileInput5" onchange="previewImage(5)">
+                            <button type="button" onclick="setActiveCell(5)">이미지 붙여넣기</button>
+                            <div id="preview5" class="image-preview"></div>
+                        </div>
+                        <div class="image-cell">
+                            <label for="fileInput3">6차시:</label>
+                            <input type="file" accept="image/*" name="screenshot6" id="fileInput6" onchange="previewImage(6)">
+                            <button type="button" onclick="setActiveCell(6)">이미지 붙여넣기</button>
+                            <div id="preview6" class="image-preview"></div>
+                        </div>
+                        <div class="image-cell">
+                            <label for="fileInput3">오프라인 1:</label>
+                            <input type="file" accept="image/*" name="screenshot7" id="fileInput7" onchange="previewImage(7)">
+                            <button type="button" onclick="setActiveCell(7)">이미지 붙여넣기</button>
+                            <div id="preview7" class="image-preview"></div>
+                        </div>
+                        <div class="image-cell">
+                            <label for="fileInput3">오프라인 2:</label>
+                            <input type="file" accept="image/*" name="screenshot8" id="fileInput8" onchange="previewImage(8)">
+                            <button type="button" onclick="setActiveCell(8)">이미지 붙여넣기</button>
+                            <div id="preview8" class="image-preview"></div>
+                        </div>
+
+                        <br>
+                        <button class="save-btn" type="button" onclick="saveClassScreenshots()">수업 사진 저장하기</button>
+                        <button class="save-btn" type="button" onclick="exportToDocx()">수업보고서 Docx 파일로 내보내기</button>
+                    </form>
+                    <form id="exportForm" method="post" style="display: none;">
+                        <input type="hidden" id="schoolNameExport" name="school_name" value="">
+                        <input type="hidden" id="fileNameExport" name="file_name" value="">
+                    </form>
+                </section>
+                </div>
     </div>
 
     <!-- Include any additional JS libraries or scripts here -->
     <script>
-        // Function to fetch schools and update the list
-        async function fetchSchools(mentor) {
-            const response = await fetch('/schools', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ mentor }),
+        const currentPath = window.location.pathname;
+        const uuid = currentPath.split('/').pop();
+        let isMetadataExpanded = true;
+        let activeCell = 1;
+
+        async function fetchSchools() {
+            const response = await fetch('/school/' + uuid, {
+                method: 'GET'
             });
 
             const data = await response.json();
@@ -106,50 +294,321 @@
             data.forEach(school => {
                 const schoolItem = document.createElement('li');
                 schoolItem.classList.add('school-item');
-                schoolItem.textContent = school.name;
+                schoolItem.textContent = school;
                 schoolItem.addEventListener('click', () => showSchoolDetails(school));
                 schoolList.appendChild(schoolItem);
             });
         }
 
-        // Function to show the "Add School" form
         function showAddSchoolForm() {
             document.getElementById('add-school-form').style.display = 'block';
+            document.getElementById('school-form').action = "/school/" + uuid;
+            document.getElementById('school-info').style.display = 'none';
         }
 
-        // Function to add dynamic student input fields
+        let studentCounter = 1;
+
         function addStudentField() {
             const studentList = document.getElementById('student-list');
-
             const studentInput = document.createElement('div');
             studentInput.innerHTML = `
-                <label for="student-number">학번:</label>
-                <input type="text" name="student-number" required>
-                <label for="student-name">이름:</label>
-                <input type="text" name="student-name" required>
+                <label for="student-number-${studentCounter}">학번:</label>
+                <input type="text" name="student-number-${studentCounter}" required>
+                <label for="student-name-${studentCounter}">이름:</label>
+                <input type="text" name="student-name-${studentCounter}" required>
             `;
             studentList.appendChild(studentInput);
+            studentCounter++;
         }
 
-        // Function to handle form submission (you can customize this)
-        document.getElementById('school-form').addEventListener('submit', function(event) {
+        async function submitForm(event) {
             event.preventDefault();
-            // Add logic to handle form submission (e.g., send data to the server)
-            // ...
+            studentCounter = 1;
+            console.log("HERE?");
+            const form = document.getElementById('school-form');
+            const formData = new FormData(form);
 
-            // After successful submission, you may want to hide the form
+            const response = await fetch(form.action, {
+                method: 'POST',
+                body: formData
+            });
+
+            // Handle the response as needed (e.g., show success message, update UI)
+            console.log(response);
+
+            // Clear the form and hide it
+            form.reset();
             document.getElementById('add-school-form').style.display = 'none';
-        });
 
-        // Function to show school details (you can customize this)
-        function showSchoolDetails(school) {
-            // Add logic to display school details (e.g., fetch and display additional information)
-            // ...
-            alert(`Selected School: ${school.name}`);
+            // Fetch and update the school list
+            fetchSchools();
         }
+
+        function showSchoolDetails(school) {
+            document.getElementById('school-info').style.display = 'block';
+            document.getElementById('classMetadataForm').action = '/metadata/' + uuid;
+            document.getElementById('AttendanceForm').action = '/attendance/' + uuid;
+            document.getElementById('classMetadataForm').reset();
+            document.getElementById('schoolName').value = school;
+            document.getElementById('schoolNameAttendance').value = school;
+            document.getElementById('headerSchoolName').innerText = school;
+            let studentCounter = 1;
+
+            fetch('/students/' + uuid, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({'school_name': school})
+            })
+            .then(response => response.json())
+            .then(data => {
+                // Populate the student list dynamically
+                const attendanceTable = document.getElementById('AttendanceTable');
+
+                // Clear existing rows
+                attendanceTable.innerHTML = '';
+
+                // Create table header row
+                const tableHeaderRow = document.createElement('tr');
+                tableHeaderRow.innerHTML = '<th>학번</th><th>이름</th>';
+
+                // Add columns for each class session (1차시 to 9차시)
+                for (let i = 1; i <= 9; i++) {
+                    tableHeaderRow.innerHTML += `<th>${i}차시<br><textarea rows="3" cols="8" id='time-${i}' name='time-${i}' placeholder="10/25\n20-22\n(2h)"></textarea></th>`;
+                }
+
+                attendanceTable.appendChild(tableHeaderRow);
+
+                // Iterate through students and add rows to the table
+                data.forEach(student => {
+                    const studentNumber = Object.keys(student)[0];
+                    const studentName = student[studentNumber];
+
+                    const tableRow = document.createElement('tr');
+                    tableRow.innerHTML = `<td><input type="text" name="student-number-${studentCounter}" value="${studentNumber}"></td><td><input type="text" name="student-name-${studentCounter}" value="${studentName}"></td>`;
+
+                    // Add columns for each class session with radio boxes and dropdowns
+                    for (let i = 1; i <= 9; i++) {
+                        tableRow.innerHTML += `
+                            <td>
+                                <input type="radio" id="attendance-${studentNumber}-${i}" name="attendance-${studentNumber}-${i}" value="출석"> 출석 <br>
+                                <input type="radio" id="attendance-${studentNumber}-${i}" name="attendance-${studentNumber}-${i}" value="결석"> 결석 <br>
+                                <input type="radio" id="attendance-${studentNumber}-${i}" name="attendance-${studentNumber}-${i}" value="지각"> 지각 <br>
+                                <select id="reason-${studentNumber}-${i}" name="reason-${studentNumber}-${i}">
+                                    <option value="없음">없음</option>
+                                    <option value="개인">개인</option>
+                                    <option value="질병">질병</option>
+                                    <option value="무단">무단</option>
+                                    <option value="기타">기타</option>
+                                    <!-- Add more reasons as needed -->
+                                </select>
+                            </td>`;
+                    }
+
+                    attendanceTable.appendChild(tableRow);
+                    studentCounter++;
+                });
+            })
+            .catch(error => console.error('Error fetching student data:', error));
+            fetch('/classdata/' + uuid, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({'school_name': school})
+            }).then(response => response.json())
+                .then(response => {
+                    selectedImages = {};
+                    for (let i = 1; i <= 8; i++) {
+                        document.getElementById(`preview${i}`).innerHTML = '';
+                    }
+                    if (Object.keys(response.class_info).length != 0) {
+                        Object.keys(response.class_info).forEach(key => {
+                            document.getElementById(key).value = response.class_info[key];
+                        });
+                    }
+
+                    if (Object.keys(response.attendance).length != 0) {
+                        Object.keys(response.attendance).forEach(key => {
+                            if (key.split('-')[0] === "attendance") {
+                                document.getElementById(key).checked = true;
+                            } else if (key.split('-')[0] === "reason" || key.split('-')[0] === "time") {
+                                document.getElementById(key).value = response.attendance[key];
+                            }
+                        });
+                    }
+
+                    if (Object.keys(response.class_screenshot).length != 0) {
+                        selectedImages = response.class_screenshot;
+                        Object.keys(response.class_screenshot).forEach(key => {
+                            const previewDiv = document.getElementById('preview' + key)
+                            const previewImage = document.createElement('img');
+                            previewImage.src = response.class_screenshot[key];
+                            previewDiv.innerHTML = ''; // Clear previous content
+                            previewDiv.appendChild(previewImage);
+                        });
+                    }
+                })
+        }
+
+        document.addEventListener('submit', function(event) {
+            event.preventDefault();
+            alert('저장 완료!');
+            console.log("YOLO!");
+            fetch(event.target.action, {
+                method: 'POST',
+                body: new FormData(event.target)
+            }).then(response => console.log(response));
+
+        })
+
+        function collapseSchoolInfo() {
+            document.getElementById('school-info').style.display = 'none';
+        }
+
+        function collapseMetadataSection() {
+            if (isMetadataExpanded) {
+                document.getElementById('classMetadataSection').style.display = 'none';
+                document.getElementById('metadataSectionButton').innerText = "수업 정보 열기";
+                isMetadataExpanded = false;
+            } else {
+                document.getElementById('classMetadataSection').style.display = 'block';
+                document.getElementById('metadataSectionButton').innerText = "수업 정보 접기";
+                isMetadataExpanded = true;
+            }
+        }
+
+        // Section 3: Class Screenshot
+let selectedImages = {};
+
+function previewImage(cell) {
+    const fileInput = document.getElementById(`fileInput${cell}`);
+    const previewDiv = document.getElementById(`preview${cell}`);
+    activeCell = cell;
+    const file = fileInput.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const previewImage = document.createElement('img');
+            previewImage.src = e.target.result;
+            previewDiv.innerHTML = ''; // Clear previous content
+            previewDiv.appendChild(previewImage);
+
+            // Update the selectedImages object
+            selectedImages[cell] = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function handleClipboardPaste(cell) {
+    const previewDiv = document.getElementById(`preview${cell}`);
+    activeCell = cell;
+    // Use a Clipboard API or external library to handle clipboard image paste
+    navigator.clipboard.read().then(data => {
+        const clipboardImage = data[0];
+        if (clipboardImage && clipboardImage.type.startsWith('image/')) {
+            const previewImage = document.createElement('img');
+            previewImage.src = URL.createObjectURL(clipboardImage);
+            previewDiv.innerHTML = ''; // Clear previous content
+            previewDiv.appendChild(previewImage);
+
+            // Update the selectedImages object
+            selectedImages[cell] = clipboardImage;
+
+            clipboardInput.value = ''; // Clear the clipboard text input
+        }
+    });
+}
+
+function saveClassScreenshots() {
+    selectedImages.school_name = document.getElementById('schoolName').value;
+    console.log(selectedImages);
+    fetch('/screenshots/' + uuid, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(selectedImages)
+        })
+        .then(response => response.json())
+        .then(response => {
+            alert("저장되었습니다!");
+        })
+}
+
+// Helper function to convert image URL to base64
+function getBase64Image(url) {
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+
+    img.crossOrigin = 'Anonymous';
+
+    return new Promise((resolve, reject) => {
+        img.onload = () => {
+            canvas.width = img.width;
+            canvas.height = img.height;
+            ctx.drawImage(img, 0, 0);
+
+            // Resolve with the base64 string
+            resolve(canvas.toDataURL());
+        };
+
+        img.onerror = reject;
+
+        // Set the image source (cross-origin)
+        img.src = url;
+    });
+}
+
+function setActiveCell(cell) {
+    activeCell = cell; // Set the active cell when the button is clicked
+}
+
+document.onpaste = function(pasteEvent) {
+    // Use the activeCell variable to determine the cell number
+    const cell = activeCell;
+
+    var item = pasteEvent.clipboardData.items[0];
+
+    if (item.type.indexOf("image") === 0) {
+        var blob = item.getAsFile();
+        var reader = new FileReader();
+        reader.onload = function(event) {
+            const dataURL = event.target.result;
+
+            // Update the selectedImages object with base64 string and cell number
+            selectedImages[cell] = dataURL;
+
+            // Display the pasted image in the preview div
+            const previewDiv = document.getElementById(`preview${cell}`);
+            const previewImage = document.createElement('img');
+            previewImage.src = dataURL;
+            previewDiv.innerHTML = ''; // Clear previous content
+            previewDiv.appendChild(previewImage);
+        };
+
+        reader.readAsDataURL(blob);
+    }
+};
+        function exportToDocx() {
+            const name = prompt("파일 이름을 입력해주세요 (확장자 제외)");
+            if (!name) {
+                alert('File name cannot be empty.');
+                return;
+            }
+            const exportForm = document.getElementById('exportForm');
+            exportForm.action = '/export/' + uuid;
+            document.getElementById('schoolNameExport').value = document.getElementById('schoolName').value;
+            document.getElementById('fileNameExport').value = name;
+            exportForm.submit();
+        }
+
 
         // Initial fetch when the page loads (you may want to call this with a specific mentor value)
-        fetchSchools('YourMentorName');
+        fetchSchools();
     </script>
 </body>
 </html>
