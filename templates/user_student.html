@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Login Page</title>
+    <title>Student Login Page</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -45,7 +45,7 @@
     <div id="login-form">
         <h2>Login</h2>
         <form id="loginForm">
-            <label for="nickname">이름:</label>
+            <label for="nickname">학번:</label>
             <input type="text" id="nickname" name="nickname" required>
 
             <label for="password">비밀번호:</label>
@@ -53,13 +53,13 @@
 
             <button type="button" onclick="submitForm()">Login</button>
         </form>
-        <button onclick="showRegister()">멘토 등록</button>
+        <button onclick="showRegister()">학생 등록</button>
 
     </div>
     <div id="registerForm" style="display: none;">
-        <form id="registration" action="/register" method="post">
-            <label for="registerName">이름:</label>
-            <input type="text" id="registerName" name="nickname" required>
+        <form id="registration" action="/register_student" method="post">
+            <label for="registerName">학번:</label>
+            <input type="text" id="registerNumber" name="studentNumber" required>
 
             <label for="registerPassword">비밀번호:</label>
             <input type="password" id="registerPassword" name="password" required>
@@ -74,12 +74,22 @@
 </body>
 
     <script>
+        let mentor_code = getQueryParam('mentor_code');
+        let school_code = getQueryParam('school_code');
+        document.getElementById('registration').action='/register_student?mentor_code=' + mentor_code + '&school_code=' + school_code;
+        console.log(mentor_code, school_code);
+
         function showRegister() {
             document.getElementById("registerForm").style.display = 'block';
         }
 
         function collapseRegister() {
             document.getElementById("registerForm").style.display = 'none';
+        }
+
+        function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
         }
 
         function submitForm() {
@@ -91,7 +101,7 @@
                 password: password
             };
 
-            fetch('/login', {
+            fetch('/student_login?mentor_code=' + mentor_code + '&school_code=' + school_code, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -117,6 +127,7 @@
                     alert(response.message);
                 })
             window.location.reload();
+
         })
     </script>
 </body>

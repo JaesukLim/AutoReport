@@ -1,6 +1,7 @@
 from flask import Flask, render_template, url_for, redirect, request, jsonify, send_file
 from docx import Document
 from docx.shared import Pt, Inches
+from docx.enum.text import WD_ALIGN_PARAGRAPH
 import uuid
 import json
 import os
@@ -66,15 +67,18 @@ def add_school_and_student(mentor_uuid):
         school_dir = os.path.join('assets', mentor_uuid, data["school-name"] + ' ' + data["field"])
         os.mkdir(school_dir)
         students = []
+        report = {}
         for i in range(1, ((len(data) - 2) // 2) + 1):
             students.append({data["student-number-" + str(i)] : data["student-name-" + str(i)]})
+            report[data["student-number-" + str(i)]] = {"registered": "No", "final_report": "No", "self_evaluation": "No"}
         metadata = {
             "school_name" : data["school-name"],
             "field" : data["field"],
             "students" : students,
             "class_info" : {},
             "attendance" : {},
-            "class_screenshot" : {}
+            "class_screenshot" : {},
+            "report" : report
         }
         with open(os.path.join(school_dir, "metadata.json"), 'w') as f:
             json.dump(metadata, f)
@@ -130,6 +134,9 @@ def get_class_data(mentor_uuid):
     data = request.json
     with open(os.path.join('assets', mentor_uuid, data['school_name'], 'metadata.json'), 'r') as f:
         metadata = json.load(f)
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    metadata['school_id'] = school_ids['school_uuid'][data['school_name']]
     return jsonify(metadata)
 
 @app.route('/screenshots/<mentor_uuid>', methods=['POST'])
@@ -164,33 +171,38 @@ def get_class_report(mentor_uuid):
     doc.tables[0].rows[2].cells[2].paragraphs[0].text = ''
     run = doc.tables[0].rows[2].cells[2].paragraphs[0].add_run(metadata['class_info']['mentorName'])
     run.font.size = Pt(12)
-    for i in range(1, 7):
+    for i in range(1, 9):
+        doc.tables[1].rows[i].cells[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
         doc.tables[1].rows[i].cells[1].paragraphs[0].text = metadata['class_info']['classOverview' + str(i)].replace('\r\n', '\n')
         doc.tables[1].rows[i].cells[2].paragraphs[0].text = metadata['class_info']['classDetails' + str(i)].replace('\r\n', '\n')
-    doc.tables[1].rows[7].cells[1].paragraphs[0].text = metadata['class_info']['classOverviewOffline'].replace('\r\n', '\n')
-    doc.tables[1].rows[7].cells[2].paragraphs[0].text = metadata['class_info']['classDetailsOffline'].replace('\r\n', '\n')
+    doc.tables[1].rows[9].cells[2].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    doc.tables[1].rows[9].cells[1].paragraphs[0].text = metadata['class_info']['classOverviewOffline'].replace('\r\n', '\n')
+    doc.tables[1].rows[9].cells[2].paragraphs[0].text = metadata['class_info']['classDetailsOffline'].replace('\r\n', '\n')
 
+    doc.tables[2].rows[1].cells[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
     doc.tables[2].rows[1].cells[1].paragraphs[0].text = metadata['class_info']['teamTopic'].replace('\r\n', '\n')
+    doc.tables[2].rows[2].cells[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
     doc.tables[2].rows[2].cells[1].paragraphs[0].text = metadata['class_info']['individualInterest'].replace('\r\n', '\n')
 
     cur_row = 2
     for student in metadata['students']:
-        print('-' * 50)
         student_number = list(student.keys())[0]
         student_name = student[student_number]
         doc.tables[3].rows[cur_row].cells[0].paragraphs[0].text = student_number
         doc.tables[3].rows[cur_row].cells[1].paragraphs[0].text = student_name
-        print(student_number, student_name)
         for key in metadata['attendance'].keys():
             status_str = ""
             if 'attendance-' + student_number in key:
-                print(key)
                 col_num = int(key.split('-')[-1])
-                status_str = metadata['attendance'][key]
+                if metadata['attendance'][key] == '출석':
+                    status_str = 'O'
+                elif metadata['attendance'][key] == '결석':
+                    status_str = 'X'
+                elif metadata['attendance'][key] == '지각':
+                    status_str = metadata['attendance'][key]
 
-                if status_str == '결석' or status_str == '지각':
+                if status_str == 'X' or status_str == '지각':
                     status_str += '\n(' + metadata['attendance']['reason-' + student_number + '-' + str(col_num)] + ')'
-                print(status_str, cur_row, col_num)
                 doc.tables[3].rows[cur_row].cells[col_num + 1].paragraphs[0].text = status_str
             elif 'time-' in key:
                 col_num = int(key.split('-')[-1])
@@ -207,6 +219,74 @@ def get_class_report(mentor_uuid):
     final_dir = os.path.join('assets', mentor_uuid, data['school_name'], data['file_name'] + '.docx')
     doc.save(final_dir)
     return send_file(final_dir, download_name=data['file_name'] + '.docx', as_attachment=True)
+
+@app.route('/student_login', methods=['GET', 'POST'])
+def student_login():
+    if request.method == 'GET':
+        args = request.args
+        mentor_code = args.get('mentor_code', type=str)
+        school_code = args.get('school_code', type=str)
+        print(mentor_code, school_code)
+        return render_template('user_student.html', mentor_code=mentor_code, school_code=school_code)
+    elif request.method == 'POST':
+        data = request.json
+        args = request.args
+        mentor_uuid = args['mentor_code']
+        school_uuid = args['school_code']
+        with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+            school_ids = json.load(f)
+        school_name = school_ids["uuid_school"][school_uuid]
+        with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+            metadata = json.load(f)
+
+        student_number = ''
+        for student in metadata['students']:
+            if list(student.values())[0] == data['nickname']:
+                student_number = list(student.keys())[0]
+        if metadata['report'][student_number]['registered'] == 'No':
+            return jsonify({"message" : "등록되지 않은 학생입니다"})
+
+        if data['password'] != metadata['report'][student_number]['password']:
+            return jsonify({"message" : "비밀번호가 틀렸습니다"})
+        else:
+            return redirect(url_for('final_report', mentor_code=mentor_uuid, school_code=school_uuid))
+
+
+@app.route('/register_student', methods=['POST'])
+def register_student():
+    data = request.form
+    args = request.args
+    mentor_uuid = args['mentor_code']
+    school_uuid = args['school_code']
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+        metadata = json.load(f)
+
+    flag = False
+    for elem in metadata['students']:
+        if data['studentNumber'] == list(elem.keys())[0]:
+            flag = True
+
+    if not flag:
+        return jsonify({"message" : "학번이 존재하지 않습니다"})
+
+    if data['password'] != data['passwordCheck']:
+        return jsonify({"message" : "두 비밀번호가 다릅니다"})
+
+    if data['studentNumber'] in list(metadata['report'].keys()):
+        return jsonify({"message" : "이미 등록된 학생입니다"})
+
+    metadata['report'][data['studentNumber']]['registered'] = 'Yes'
+    metadata['report'][data['studentNumber']]['password'] = data['password']
+    return jsonify({"message" : "성공적으로 등록되었습니다"})
+
+@app.route('/final_report', methods=['GET', 'POST'])
+def final_report():
+    if request.method == 'GET':
+        return render_template('main.html')
+
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5002, debug=False)
