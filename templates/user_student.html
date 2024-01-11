@@ -45,7 +45,7 @@
     <div id="login-form">
         <h2>Login</h2>
         <form id="loginForm">
-            <label for="nickname">학번:</label>
+            <label for="nickname">이름:</label>
             <input type="text" id="nickname" name="nickname" required>
 
             <label for="password">비밀번호:</label>
@@ -58,8 +58,11 @@
     </div>
     <div id="registerForm" style="display: none;">
         <form id="registration" action="/register_student" method="post">
-            <label for="registerName">학번:</label>
+            <label for="registerNumber">학번:</label>
             <input type="text" id="registerNumber" name="studentNumber" required>
+
+            <label for="registerName">이름:</label>
+            <input type="text" id="registerName" name="studentName" required>
 
             <label for="registerPassword">비밀번호:</label>
             <input type="password" id="registerPassword" name="password" required>
@@ -112,6 +115,7 @@
                 if (loginResponse.redirected) {
                     window.location.href = loginResponse.url; // Redirect to the play page
                 } else {
+                    console.log(loginResponse.json());
                     alert('로그인에 실패했습니다');
                 }
             })
@@ -125,9 +129,13 @@
             }).then(response => response.json())
                 .then(response => {
                     alert(response.message);
-                })
-            window.location.reload();
+                    if (response.status === "Fail") {
+                        event.target.reset();
+                    } else {
+                        window.location.reload();
+                    }
 
+                })
         })
     </script>
 </body>

@@ -226,11 +226,11 @@ def student_login():
         args = request.args
         mentor_code = args.get('mentor_code', type=str)
         school_code = args.get('school_code', type=str)
-        print(mentor_code, school_code)
         return render_template('user_student.html', mentor_code=mentor_code, school_code=school_code)
     elif request.method == 'POST':
         data = request.json
         args = request.args
+        print(data)
         mentor_uuid = args['mentor_code']
         school_uuid = args['school_code']
         with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
@@ -243,11 +243,17 @@ def student_login():
         for student in metadata['students']:
             if list(student.values())[0] == data['nickname']:
                 student_number = list(student.keys())[0]
+
+        print("student num:", student_number)
+        if student_number == '':
+            return jsonify({"message" : "학번을 찾을 수 없습니다"})
+
         if metadata['report'][student_number]['registered'] == 'No':
             return jsonify({"message" : "등록되지 않은 학생입니다"})
 
         if data['password'] != metadata['report'][student_number]['password']:
             return jsonify({"message" : "비밀번호가 틀렸습니다"})
+
         else:
             return redirect(url_for('final_report', mentor_code=mentor_uuid, school_code=school_uuid))
 
@@ -256,6 +262,7 @@ def student_login():
 def register_student():
     data = request.form
     args = request.args
+    print(data)
     mentor_uuid = args['mentor_code']
     school_uuid = args['school_code']
     with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
@@ -265,22 +272,29 @@ def register_student():
         metadata = json.load(f)
 
     flag = False
+    student_name = ''
     for elem in metadata['students']:
         if data['studentNumber'] == list(elem.keys())[0]:
             flag = True
-
+            student_name = list(elem.values())[0]
     if not flag:
-        return jsonify({"message" : "학번이 존재하지 않습니다"})
+        return jsonify({"message" : "학번이 존재하지 않습니다", 'status': "Fail"})
+
+    if student_name != '' and data['studentName'] != student_name:
+        return jsonify({"message" : "학번과 이름이 다릅니다", 'status': "Fail"})
 
     if data['password'] != data['passwordCheck']:
-        return jsonify({"message" : "두 비밀번호가 다릅니다"})
+        return jsonify({"message" : "두 비밀번호가 다릅니다", 'status': "Fail"})
 
-    if data['studentNumber'] in list(metadata['report'].keys()):
-        return jsonify({"message" : "이미 등록된 학생입니다"})
+    if metadata['report'][data['studentNumber']]['registered'] == 'Yes':
+        return jsonify({"message" : "이미 등록된 학생입니다", 'status': "Fail"})
 
     metadata['report'][data['studentNumber']]['registered'] = 'Yes'
     metadata['report'][data['studentNumber']]['password'] = data['password']
-    return jsonify({"message" : "성공적으로 등록되었습니다"})
+    print(metadata['report'])
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'w') as f:
+        json.dump(metadata, f)
+    return jsonify({"message" : "성공적으로 등록되었습니다\n만든 계정으로 로그인하세요", 'status': "Success"})
 
 @app.route('/final_report', methods=['GET', 'POST'])
 def final_report():
