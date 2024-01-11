@@ -130,10 +130,13 @@
             </form>
         </div>
             <div id="school-info">
+                <h2><span id="headerSchoolName"></span></h2>
                 <button id="collapseButton" onclick="collapseSchoolInfo()"> < 접기</button>
-                <button id="metadataSectionButton" onclick="collapseMetadataSection()"> 수업 정보 접기 </button>
-                <section id="classMetadataSection">
-                    <h2><span id="headerSchoolName"></span></h2>
+                <button id="metadataSectionButton" onclick="collapseSection('metadataSection')"> 수업 정보 섹션 <span id="metadataSectionSuffix">접기</span></button>
+                <button id="attendanceSectionButton" onclick="collapseSection('attendanceSection')"> 출결 상황 섹션 <span id="attendanceSectionSuffix">접기</span></button>
+                <button id="attendanceSectionButton" onclick="collapseSection('screenshotSection')"> 수업 사진 섹션 <span id="screenshotSectionSuffix">접기</span></button>
+                <section id="metadataSection">
+                    <h2>수업 기본 정보</h2>
                     <form id="classMetadataForm" action="/metadata" method="post">
                         <input type="hidden" id="schoolName" name="schoolName" required>
 
@@ -184,7 +187,7 @@
                             <tr>
                                 <td>7차시</td>
                                 <td><input type="text" id="classOverview7" name="classOverview7"></td>
-                                <td><textarea id="classDetails7" name="classDetails8"></textarea></td>
+                                <td><textarea id="classDetails7" name="classDetails7"></textarea></td>
                             </tr>
                             <tr>
                                 <td>8차시</td>
@@ -207,7 +210,7 @@
                     </form>
                 </section>
 
-                <section>
+                <section id="attendanceSection">
                     <h2>출결 현황</h2>
                     <form id="AttendanceForm" method="post">
 
@@ -220,7 +223,7 @@
                     </form>
                 </section>
 
-                <section>
+                <section id="screenshotSection">
                     <h2>수업 사진</h2>
                     <form id="classScreenshotForm">
                         <div class="image-cell">
@@ -281,6 +284,14 @@
                         <input type="hidden" id="fileNameExport" name="file_name" value="">
                     </form>
                 </section>
+
+                <section id="reportSection">
+                    <h2>제출 자료 관리</h2>
+                        <h3> 학생 가입 링크 : <span id="studentRegisterLink"></span></h3>
+                        <table id="reportTable">
+
+                        </table>
+                </section>
                 </div>
     </div>
 
@@ -288,7 +299,12 @@
     <script>
         const currentPath = window.location.pathname;
         const uuid = currentPath.split('/').pop();
-        let isMetadataExpanded = true;
+        let school_id = '';
+        let expanded = {
+            'metadataSection' : true,
+            'attendanceSection' : true,
+            'screenshotSection' : true
+        };
         let activeCell = 1;
 
         async function fetchSchools() {
@@ -429,6 +445,8 @@
             }).then(response => response.json())
                 .then(response => {
                     selectedImages = {};
+                    school_id = response['school_id']
+                    document.getElementById('studentRegisterLink').innerText = window.location.origin + '/student_login?mentor_code=' + uuid + '&school_code=' + school_id;
                     for (let i = 1; i <= 8; i++) {
                         document.getElementById(`preview${i}`).innerHTML = '';
                     }
@@ -477,15 +495,15 @@
             document.getElementById('school-info').style.display = 'none';
         }
 
-        function collapseMetadataSection() {
-            if (isMetadataExpanded) {
-                document.getElementById('classMetadataSection').style.display = 'none';
-                document.getElementById('metadataSectionButton').innerText = "수업 정보 열기";
-                isMetadataExpanded = false;
+        function collapseSection(section) {
+            if (expanded[section]) {
+                document.getElementById(section).style.display = 'none';
+                document.getElementById(section + 'Suffix').innerText = "열기";
+                expanded[section] = false;
             } else {
-                document.getElementById('classMetadataSection').style.display = 'block';
-                document.getElementById('metadataSectionButton').innerText = "수업 정보 접기";
-                isMetadataExpanded = true;
+                document.getElementById(section).style.display = 'block';
+                document.getElementById(section + 'Suffix').innerText = "접기";
+                expanded[section] = true;
             }
         }
 
