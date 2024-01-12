@@ -84,7 +84,7 @@
 
     #guideline {
         width: 45%;
-        height: 100%;
+        height: 100%
         padding: 10px;
         background-color: #f2f2f2;
         overflow: auto;
@@ -111,9 +111,12 @@
 
 </head>
 <body>
-<button id="switchTypeButton" onclick="switchType()"> 자기활동평가서 열기 </button>
+
 <div id="main">
-    <div id="final-report">
+<div>
+    <input type="file" id="jsonFileInput" accept=".json" />
+    <button onclick="loadJson()">Load JSON</button>
+</div>
 <div id="editor"></div>
 
 <div>
@@ -129,14 +132,7 @@
     <button onclick="createCell('ref')">+참고문헌</button>
 </div>
 
-<button onclick="submitReport()">최종보고서 저장하기</button>
-    </div>
-
-<div id="self-eval-div" style="display: none">
-    <textarea id="self-eval" rows="10" cols="60" placeholder="자기활동평가서 작성 칸">
-    </textarea>
-    <button id="submitSelfEvalButton" onclick="submitEval()">자기활동평가서 저장하기</button>
-</div>
+<button onclick="downloadJson()">Download JSON</button>
 </div>
 
 <div id="guideline">
@@ -154,23 +150,7 @@
     let mentor_code = getQueryParam('mentor_code');
     let school_code = getQueryParam('school_code');
     let student_code = getQueryParam('student_code');
-    let query_string = '?mentor_code=' + mentor_code + '&school_code=' + school_code + '&student_code=' + student_code;
-    let isReport = true;
     console.log(mentor_code, school_code, student_code);
-
-    function switchType() {
-        if (isReport) {
-            document.getElementById('final-report').style.display = 'none';
-            document.getElementById('self-eval-div').style.display = 'block';
-            document.getElementById('switchTypeButton').innerText = '최종보고서 열기'
-            isReport = !isReport;
-        } else {
-            document.getElementById('final-report').style.display = 'block';
-            document.getElementById('self-eval-div').style.display = 'none';
-            document.getElementById('switchTypeButton').innerText = '자기활동평가서 열기'
-            isReport = !isReport;
-        }
-    }
 
     function getQueryParam(name) {
             const urlParams = new URLSearchParams(window.location.search);
@@ -433,13 +413,16 @@ function handlePasteImage(cell) {
 
     function updateCharCount(cell, input) {
     const charCount = cell.querySelector('#charCount');
-    charCount.textContent = input.value.length + ' 글자';
+    charCount.textContent = input.value.length + ' characters';
 }
 
-function submitReport() {
+function downloadJson() {
+        const fileName = prompt('파일 이름을 작성해주세요 (확장자 X)');
+        const name = prompt('이름을 작성해주세요');
+        if (!fileName || !name) return; // User clicked cancel
 
         const data = {
-            type: "report",
+            id: name, // You can replace this with the actual user ID
             contents: []
         };
 
@@ -473,56 +456,44 @@ function submitReport() {
             }
         });
 
-        fetch('/final_report' + query_string, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            }
-        ).then(response => response.json())
-            .then(response => {
-                alert('최종보고서 저장 완료!');
-                window.location.reload();
-    })
-}
+        const jsonStr = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonStr], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName + '_' + name + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+
+        URL.revokeObjectURL(url);
+    }
 
     function loadJson() {
-        fetch('/final_report' + query_string, {
-                method: 'GET'
-            }
-        ).then(response => response.json())
-            .then(data => {
+        const jsonFileInput = document.getElementById('jsonFileInput');
+        const file = jsonFileInput.files[0];
+
+        if (file) {
+            const reader = new FileReader();
+
+            reader.onload = function (e) {
+                const jsonString = e.target.result;
+                const data = JSON.parse(jsonString);
+
+                //clearEditor();
+
                 data.contents.forEach(function (content) {
                     if (content.type === 'image') {
                         createCell(content.type, content.content, content.caption);
                     } else {
                         createCell(content.type, content.content);
                     }
-                })
-                document.getElementById('self-eval').value = data.eval;
-            })
-    }
+                });
+            };
 
-    function submitEval() {
-        let text = document.getElementById('self-eval').value;
-        const data = {
-            'type': 'eval',
-            'content': text
+            reader.readAsText(file);
         }
-        fetch('/final_report' + query_string, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify(data)
-            }
-        ).then(response => response.json())
-            .then(response => {
-                alert('자기활동평가서 저장 완료!');
-                window.location.reload();
-    })
-
     }
 
     function clearEditor() {
@@ -543,8 +514,6 @@ function submitReport() {
         textarea.style.height = 'auto'; // Reset height to auto
         textarea.style.height = (textarea.scrollHeight + 2) + 'px'; // Set the height based on content
     }
-
-    loadJson();
 
 
 </script>

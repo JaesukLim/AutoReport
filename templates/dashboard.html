@@ -135,6 +135,7 @@
                 <button id="metadataSectionButton" onclick="collapseSection('metadataSection')"> 수업 정보 섹션 <span id="metadataSectionSuffix">접기</span></button>
                 <button id="attendanceSectionButton" onclick="collapseSection('attendanceSection')"> 출결 상황 섹션 <span id="attendanceSectionSuffix">접기</span></button>
                 <button id="attendanceSectionButton" onclick="collapseSection('screenshotSection')"> 수업 사진 섹션 <span id="screenshotSectionSuffix">접기</span></button>
+                <button id="deleteButton" onclick="deleteSchool()"> 학교 삭제 </button>
                 <section id="metadataSection">
                     <h2>수업 기본 정보</h2>
                     <form id="classMetadataForm" action="/metadata" method="post">
@@ -289,8 +290,12 @@
                     <h2>제출 자료 관리</h2>
                         <h3> 학생 가입 링크 : <span id="studentRegisterLink"></span></h3>
                         <table id="reportTable">
-
                         </table>
+                        <h3>학번 : <span id="studentNumEval"></span></h3>
+                        <h3>이름 : <span id="studentNameEval"></span></h3>
+                        <textarea id="self-eval-preview" cols="90" rows="10"></textarea>
+                        <textarea id="self-eval-rev" cols="90" rows="10"></textarea>
+                        <button class="save-btn" id="saveEvalButton" onclick="saveSelfEvalRev()"> 수정본 저장하기 </button>
                 </section>
                 </div>
     </div>
@@ -390,20 +395,34 @@
             .then(data => {
                 // Populate the student list dynamically
                 const attendanceTable = document.getElementById('AttendanceTable');
+                const reportTable = document.getElementById('reportTable');
 
                 // Clear existing rows
                 attendanceTable.innerHTML = '';
+                reportTable.innerHTML = '';
 
                 // Create table header row
                 const tableHeaderRow = document.createElement('tr');
                 tableHeaderRow.innerHTML = '<th>학번</th><th>이름</th>';
 
+                const reportTableHeaderRow = document.createElement('tr');
+                reportTableHeaderRow.innerHTML = `
+                            <th>학번</th>
+                            <th>이름</th>
+                            <th>등록 여부</th>
+                            <th>비밀번호</th>
+                            <th>최종보고서</th>
+                            <th>자기활동평가서</th>
+                            <th>자기활동평가서 수정(멘토)</th>
+                            <th></th>
+                            `;
                 // Add columns for each class session (1차시 to 9차시)
                 for (let i = 1; i <= 9; i++) {
                     tableHeaderRow.innerHTML += `<th>${i}차시<br><textarea rows="3" cols="8" id='time-${i}' name='time-${i}' placeholder="10/25\n20-22\n(2h)"></textarea></th>`;
                 }
 
                 attendanceTable.appendChild(tableHeaderRow);
+                reportTable.appendChild(reportTableHeaderRow);
 
                 // Iterate through students and add rows to the table
                 data.forEach(student => {
@@ -411,8 +430,18 @@
                     const studentName = student[studentNumber];
 
                     const tableRow = document.createElement('tr');
+                    const reportTableRow = document.createElement('tr');
                     tableRow.innerHTML = `<td><input type="text" name="student-number-${studentCounter}" value="${studentNumber}"></td><td><input type="text" name="student-name-${studentCounter}" value="${studentName}"></td>`;
-
+                    reportTableRow.innerHTML = `
+                        <td>${studentNumber}</td>
+                        <td>${studentName}</td>
+                        <td id="isRegistered-${studentNumber}"></td>
+                        <td id="studentPassword-${studentNumber}"></td>
+                        <td id="isFinalReport-${studentNumber}"></td>
+                        <td id="isSelfEval-${studentNumber}"></td>
+                        <td id="isSelfEvalRev-${studentNumber}"></td>
+                        <td><button id="revButton-${studentNumber}" onclick="viewRev('${studentNumber}', '${studentName}')">자기활동평가서 수정하기</button></td>
+                        `;
                     // Add columns for each class session with radio boxes and dropdowns
                     for (let i = 1; i <= 9; i++) {
                         tableRow.innerHTML += `
@@ -432,6 +461,7 @@
                     }
 
                     attendanceTable.appendChild(tableRow);
+                    reportTable.appendChild(reportTableRow);
                     studentCounter++;
                 });
             })
@@ -476,6 +506,15 @@
                             previewDiv.innerHTML = ''; // Clear previous content
                             previewDiv.appendChild(previewImage);
                         });
+                    }
+                    if (Object.keys(response.report_status).length != 0) {
+                        Object.keys(response.report_status).forEach(key => {
+                            document.getElementById('isRegistered-' + key).innerText = response.report_status[key]['registered'];
+                            document.getElementById('studentPassword-' + key).innerText = response.report_status[key]['password'];
+                            document.getElementById('isFinalReport-' + key).innerText = response.report_status[key]['final_report'];
+                            document.getElementById('isSelfEval-' + key).innerText = response.report_status[key]['self_evaluation'];
+                            document.getElementById('isSelfEvalRev-' + key).innerText = response.report_status[key]['self_evaluation_revised'];
+                        })
                     }
                 })
         }
@@ -632,6 +671,32 @@ document.onpaste = function(pasteEvent) {
             document.getElementById('schoolNameExport').value = document.getElementById('schoolName').value;
             document.getElementById('fileNameExport').value = name;
             exportForm.submit();
+        }
+
+        function deleteSchool() {
+            let school_name = document.getElementById('schoolName').value;
+            fetch('/delete_school/' + uuid, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({'school_name' : school_name})
+            })
+            .then(response => response.json())
+            .then(response => {
+                alert("삭제되었습니다!");
+                window.location.reload();
+            })
+        }
+
+        function viewRev(studentNum, studentName) {
+            document.getElementById('studentNumEval').innerText = studentNum;
+            document.getElementById('studentNameEval').innerText = studentName;
+            const data = {
+                "school_name": document.getElementById('schoolName').value,
+                "student_number": studentNum
+            }
+
         }
 
 
