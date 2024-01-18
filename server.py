@@ -9,6 +9,30 @@ import math
 import io
 import base64
 import shutil
+import glob
+
+# For Exporting Final Report
+counters = [0, 1, 0, 1, 0, 1, 0]
+h1_headers = ['I. ', 'II. ', 'III. ', 'IV. ', 'V. ', 'VI. ', 'VII. ', 'VIII. ', 'IX. ', 'X. ']
+korean_headers = ['가', '나', '다', '라', '마', '바', '사', '아', '자', '차', '카', '타', '파', '하']
+previous_level = 0
+image_counter = 1
+table_counter = 1
+ref_counter = 1
+
+def get_current_header(level, counter):
+    if level == 1:
+        return str(counter) + '. '
+    elif level == 2:
+        return korean_headers[counter] + '. '
+    elif level == 3:
+        return str(counter) + ') '
+    elif level == 4:
+        return korean_headers[counter] + ') '
+    elif level == 5:
+        return '(' + str(counter) + ') '
+    elif level == 6:
+        return '(' + korean_headers[counter] + ') '
 
 app = Flask(__name__)
 @app.route('/admin')
@@ -311,11 +335,15 @@ def register_student():
 def report_page():
     return render_template('main.html')
 
-@app.route('/student_id')
-def get_student_id():
-    args = request.args
-    mentor_uuid = args['mentor_code']
-    school_uuid = args['school_uuid']
+@app.route('/student_id/<mentor_uuid>', methods=['POST'])
+def get_student_id(mentor_uuid):
+    data = request.json
+    school_name = data['school_name']
+    student_number = data['student_number']
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+        metadata = json.load(f)
+    return jsonify({"student_id" : metadata['student_num_uuid'][student_number]})
+
 
 
 @app.route('/final_report', methods=['GET', 'POST'])
@@ -329,6 +357,7 @@ def final_report():
         school_name = school_ids["uuid_school"][school_uuid]
         with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
             metadata = json.load(f)
+
         student_num = metadata['uuid_student_num'][student_uuid]
         file_name = student_num + '_report.json'
         if os.path.exists(os.path.join('assets', mentor_uuid, school_name, file_name)):
@@ -348,6 +377,7 @@ def final_report():
         school_name = school_ids["uuid_school"][school_uuid]
         with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
             metadata = json.load(f)
+
         student_num = metadata['uuid_student_num'][student_uuid]
         file_name = student_num + '_report.json'
 
@@ -355,7 +385,7 @@ def final_report():
             with open(os.path.join('assets', mentor_uuid, school_name, file_name), 'r') as f:
                 save_data = json.load(f)
         else:
-            save_data = {"contents": [], "eval": '', "eval_revised": ""}
+            save_data = {"contents": [], "eval": '', "eval_revised": {"text": "", "class_attitude": "중", "class_attitude_detail": "", "report_topic" : ""}}
 
         if data['type'] == 'report':
             save_data['contents'] = data['contents']
@@ -387,6 +417,158 @@ def delete_school(mentor_uuid):
     shutil.rmtree(os.path.join('assets', mentor_uuid, school_name))
     return jsonify({"message" : "Success"})
 
+@app.route('/final_report_modify')
+def final_report_modify():
+    return render_template('main_mentor.html')
+
+@app.route('/total_report/<report_name>', methods=['GET', 'POST'])
+def get_total_report(report_name):
+    mentor_uuid = request.args['mentor_code']
+    school_uuid = request.args['school_code']
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+
+    if request.method == 'POST':
+        data = request.json
+        with open(os.path.join('assets', mentor_uuid, school_name, 'mentor_' + report_name + '.json'), 'w') as f:
+            json.dump(data, f)
+        return jsonify({"message" : "성공적으로 저장되었습니다!"})
+
+    elif request.method == 'GET':
+        if report_name == 'dropdown':
+            files = os.listdir(os.path.join('assets', mentor_uuid, school_name))
+            res = []
+            for file in files:
+                if 'mentor_' in file:
+                    res.append(file.replace('mentor_', '').replace('.json', ''))
+            return jsonify({"message": "Success", "files": res})
+
+        elif not os.path.exists(os.path.join('assets', mentor_uuid, school_name, 'mentor_' + report_name + '.json')):
+            return jsonify({"message": "해당 파일이 없습니다"})
+
+        else:
+            with open(os.path.join('assets', mentor_uuid, school_name, 'mentor_' + report_name + '.json'), 'r') as f:
+                res = json.load(f)
+            return jsonify({"message": "Success", "data": res})
+
+@app.route('/export_total_report', methods=['POST'])
+def export_total_report():
+    global counters, table_counter, image_counter, ref_counter, previous_level
+    mentor_uuid = request.args['mentor_code']
+    school_uuid = request.args['school_code']
+    report_name = request.json['report_name']
+    file_name = request.json['file_name']
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+        metadata = json.load(f)
+    with open(os.path.join('assets', mentor_uuid, school_name, 'mentor_' + report_name + '.json'), 'r') as f:
+        report = json.load(f)
+
+    doc = Document('FinalReport_empty.docx')
+    start_date = report['metadata']['startDate']
+    end_date = report['metadata']['endDate']
+    doc.tables[0].rows[0].cells[2].paragraphs[0].text = metadata['school_name']
+    doc.tables[0].rows[0].cells[4].paragraphs[0].text = report['metadata']['students']
+    doc.tables[0].rows[1].cells[2].paragraphs[0].text = metadata['field']
+    doc.tables[0].rows[1].cells[4].paragraphs[0].text = metadata['class_info']['mentorName']
+    doc.tables[0].rows[2].cells[1].paragraphs[0].text = f"{report['metadata']['startDate'][0:4]}년 {start_date[4:6]}월 {start_date[6:]}일 ~ {end_date[0:4]}년 {end_date[4:6]}월 {end_date[6:]}일"
+    doc.tables[0].rows[3].cells[2].paragraphs[0].text = report['metadata']['reportName']
+    doc.tables[0].rows[4].cells[2].paragraphs[0].text = report['metadata']['reportNameEng']
+    doc.tables[0].rows[5].cells[1].paragraphs[0].text = report['metadata']['keyWords']
+
+    for content in report['contents']:
+        if content['type'] == 'h1':
+            current_level = int(content['type'][1]) - 1
+            if current_level < previous_level:
+                for i in range(current_level + 1, 7):
+                    counters[i] = i % 2
+
+            para = doc.tables[1].rows[0].cells[0].add_paragraph()
+            run = para.add_run(h1_headers[counters[current_level]] + content['content'])
+            run.bold = True
+            run.font.size = Pt(12)
+            run.font.name = '맑은 고딕'
+            counters[current_level] += 1
+            previous_level = current_level
+
+        elif content['type'] == 'text':
+            para = doc.tables[1].rows[0].cells[0].add_paragraph()
+            run = para.add_run(' ' + content['content'] + '\n')
+            run.bold = False
+            run.font.size = Pt(10)
+
+        elif content['type'] == 'image':
+            para = doc.tables[1].rows[0].cells[0].add_paragraph()
+            para.alignment = WD_ALIGN_PARAGRAPH.CENTER
+            run = para.add_run()
+            binary = base64.b64decode(content['content'].split(',')[1])
+            run.add_picture(io.BytesIO(binary), height=Inches(3))
+            run2 = para.add_run('\n그림 ' + str(image_counter) + '. ' + content['caption'] + '\n')
+            run2.font.size = Pt(8)
+            image_counter += 1
+
+        elif content['type'] == "ref":
+            para = doc.tables[1].rows[0].cells[0].add_paragraph()
+            run = para.add_run(f'[{ref_counter}] ' + content['content'])
+            run.bold = False
+            run.font.size = Pt(10)
+            ref_counter += 1
+
+        else:
+            current_level = int(content['type'][1]) - 1
+            if current_level < previous_level:
+                for i in range(current_level + 1, 7):
+                    counters[i] = i % 2
+
+            para = doc.tables[1].rows[0].cells[0].add_paragraph()
+            para.paragraph_format.left_indent = Pt(20 * current_level)
+            run = para.add_run(get_current_header(current_level, counters[current_level]) + content['content'])
+            run.bold = False
+            run.font.size = Pt(10)
+            counters[current_level] += 1
+            previous_level = current_level
+
+    image_counter = 1
+    ref_counter = 1
+    counters = [0, 1, 0, 1, 0, 1, 0]
+    previous_level = 0
+    final_dir = os.path.join('assets', mentor_uuid, school_name, 'exported_' + report_name + '.docx')
+    doc.save(final_dir)
+    return send_file(final_dir, download_name=file_name + '.docx', as_attachment=True)
+
+@app.route('/export_self_eval', methods=['POST'])
+def export_self_eval():
+    mentor_uuid = request.args['mentor_code']
+    school_uuid = request.args['school_code']
+    student_name = request.json['student_name']
+    student_num = request.json['student_num']
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+        metadata = json.load(f)
+    with open(os.path.join('assets', mentor_uuid, school_name, student_num + '_report.json'), 'r') as f:
+        report = json.load(f)
+
+    doc = Document('SelfEval_empty.docx')
+    doc.tables[0].rows[0].cells[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    doc.tables[0].rows[0].cells[1].paragraphs[0].text = metadata['school_name']
+    doc.tables[0].rows[1].cells[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    doc.tables[0].rows[1].cells[1].paragraphs[0].text = student_num + ' ' + student_name
+    doc.tables[0].rows[2].cells[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    doc.tables[0].rows[2].cells[1].paragraphs[0].text = metadata['class_info']['mentorName']
+    doc.tables[0].rows[3].cells[1].paragraphs[0].alignment = WD_ALIGN_PARAGRAPH.LEFT
+    doc.tables[0].rows[3].cells[1].paragraphs[0].text = report['eval_revised']['report_topic']
+    doc.tables[1].rows[0].cells[0].paragraphs[0].text = report['eval']
+    doc.tables[2].rows[1].cells[0].paragraphs[0].text = report['eval_revised']['class_attitude']
+    doc.tables[2].rows[1].cells[1].paragraphs[0].text = report['eval_revised']['class_attitude_detail']
+    doc.tables[2].rows[2].cells[0].paragraphs[0].text = report['eval_revised']['text']
+    final_dir = os.path.join('assets', mentor_uuid, school_name, '자기활동평가서_' + student_name + '.docx')
+    doc.save(final_dir)
+    return send_file(final_dir, download_name='자기활동평가서_' + student_name + '.docx', as_attachment=True)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5002, debug=False)

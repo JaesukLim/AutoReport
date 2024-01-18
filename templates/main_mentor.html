@@ -1,0 +1,777 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>최종보고서 수합 페이지</title>
+    <style>
+    body {
+        font-family: Arial, sans-serif;
+    }
+
+    button {
+        padding: 5px 10px;
+        margin: 5px;
+        cursor: pointer;
+    }
+
+    .cell {
+        border: 1px solid #ccc;
+        padding: 10px;
+        margin-bottom: 10px;
+        overflow: hidden; /* Fix for button visibility */
+        position: relative;
+    }
+
+    .cell button {
+        position: absolute;
+        top: 5px;
+    }
+
+    .cell #removeButton {
+        right: 5px;
+    }
+
+    .cell #upButton {
+        right: 125px; /* Adjust the spacing between buttons */
+    }
+
+    .cell #downButton {
+        right: 55px; /* Adjust the spacing between buttons */
+    }
+
+    .cell #pasteButton {
+        right: 175px; /* Adjust the spacing between buttons */
+    }
+
+    .cell img {
+        max-width: 100%;
+        max-height: 150px;
+        display: block;
+        margin-top: 10px;
+    }
+
+    #editor {
+        padding: 10px;
+        border: 1px solid #ccc;
+        background-color: #f9f9f9;
+        height: 80vh;
+        overflow-y: auto;
+    }
+
+    #editor button {
+        margin: 5px;
+    }
+
+    #editor .cell {
+        background-color: #fff;
+    }
+
+    #editor .cell:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+
+    input,
+    textarea {
+        font-family: Arial, sans-serif;
+        font-size: 20px;
+        box-sizing: border-box; /* Include padding and border in the element's total width and height */
+    }
+
+    textarea {
+        resize: vertical; /* Allow vertical resizing of textarea */
+    }
+
+    #guideline {
+        width: 45%;
+        height: 100%;
+        padding: 10px;
+        background-color: #f2f2f2;
+        overflow: auto;
+        float: left;
+        text-align: center;
+    }
+
+    #main {
+        width: 50%;
+        height: 100%;
+        flex-grow: 1;
+        padding: 10px;
+        overflow-y: auto;
+        float: left;
+    }
+
+    #cellNumber {
+        font-family: Arial, sans-serif;
+        font-weight: bold;
+        font-size: 20px;
+    }
+
+    #preview {
+        float: left;
+        width: 70%;
+        height: 100%;
+        display: block;
+        overflow: auto;
+    }
+
+    #student-list {
+        float: left;
+        width: 25%;
+        height: 100%;
+        display: block;
+        overflow: auto;
+    }
+
+    #preview-and-list {
+        width: 100%;
+        height: 45%;
+        padding: 5px;
+        float: left;
+        overflow: auto;
+    }
+
+    #report-metadata {
+        width: 100%;
+        height: 50%;
+        padding: 5px;
+        float: left;
+        overflow: auto;
+    }
+</style>
+
+
+</head>
+<body>
+
+<div id="main">
+    <label for="file-name">파일 이름 (새로 입력하거나 선택하기)</label>
+    <input type="text" id="file-name" value="" list="files">
+    <datalist id="files">
+    </datalist>
+    <button id="clearButton" onclick="clearEditor()">새로 만들기</button>
+<div id="editor"></div>
+<div>
+    <button onclick="createCell('h1')">I. / 수준 1</button>
+    <button onclick="createCell('h2')">1. / 수준 2</button>
+    <button onclick="createCell('h3')">가. / 수준 3</button>
+    <button onclick="createCell('h4')">1) / 수준 4</button>
+    <button onclick="createCell('h5')">가) / 수준 5</button>
+    <button onclick="createCell('h6')">(1) / 수준 6</button>
+    <button onclick="createCell('h7')">(가) / 수준 7</button>
+    <button onclick="createCell('text')">+문단</button>
+    <button onclick="createCell('image')">+이미지</button>
+    <button onclick="createCell('ref')">+참고문헌</button>
+</div>
+
+<button onclick="downloadJson()">최종보고서 서버에 저장하기</button>
+<button onclick="downloadDocx()" id="exportButton" style="display: none">최종보고서 Docx로 저장하기</button>
+</div>
+
+<div id="guideline">
+    <div id="preview-and-list">
+        <div id="preview">
+            <p> 학생들 보고서 미리보기 <br> (클릭으로 미리보기, 더블클릭으로 추가)</p>
+        </div>
+        <div id="student-list">
+            <strong> 제출한 학생 </strong>
+            <table id="isSubmitted">
+
+            </table>
+            <strong> 미제출 학생 </strong>
+            <table id="isNotSubmitted">
+
+            </table>
+        </div>
+    </div>
+
+    <div id="report-metadata">
+        <form id="reportMetadata">
+            <label for="reportName">연구 제목</label>
+            <input id="reportName" name="reportName" value="" placeholder="보고서 제목"><br>
+            <label for="reportNameEng">연구 제목 (영문)</label>
+            <input id="reportNameEng" name="reportNameEng" value="" placeholder="보고서 제목 (영문)"><br>
+            <label for="students">학번/이름</label>
+            <textarea id="students" name="students" cols="20" rows="5" placeholder="학번/이름"></textarea><br>
+            <label for="startDate">시작 날짜</label>
+            <input id="startDate" name="startDate" value="" placeholder="시작 날짜 (YYYYMMDD)"><br>
+            <label for="endDate">종료 날짜</label>
+            <input id="endDate" name="endDate" value="" placeholder="종료 날짜 (YYYYMMDD)"><br>
+            <label for="keyWords">키워드 (5개 이상)</label>
+            <input id="keyWords" name="keyWords" value="" placeholder="키워드 (5개 이상)"><br>
+        </form>
+    </div>
+</div>
+<script>
+    let cells = [];
+    let cellCounter = 0;
+    let mentor_code = getQueryParam('mentor_code');
+    let school_name = getQueryParam('school_name');
+    let school_code = getQueryParam('school_code');
+    const fileNameInput = document.getElementById('file-name');
+    const queryString = '?mentor_code=' + mentor_code + '&school_code=' + school_code;
+
+    function getQueryParam(name) {
+            const urlParams = new URLSearchParams(window.location.search);
+            return urlParams.get(name);
+        }
+
+    function createCell(type, content, caption) {
+        const editor = document.getElementById('editor');
+
+        const cell = document.createElement('div');
+        cell.id = type + '_' + Math.random().toString(36).substr(2, 9);
+        cell.classList.add('cell');
+
+        const cellNumber = document.createElement('span');
+        cellNumber.textContent = '[' + (cells.length + 1) + '] ';
+        cellNumber.id = 'cellNumber'
+        cell.appendChild(cellNumber);
+
+        const removeButton = document.createElement('button');
+        removeButton.id = 'removeButton';
+        removeButton.textContent = 'x';
+        removeButton.onclick = function () {
+            removeCell(cell);
+        };
+
+        const upButton = document.createElement('button');
+        upButton.id = 'upButton';
+        upButton.textContent = 'up';
+        upButton.onclick = function () {
+            moveCellUp(cell);
+        };
+
+        const downButton = document.createElement('button');
+        downButton.id = 'downButton';
+        downButton.textContent = 'down';
+        downButton.onclick = function () {
+            moveCellDown(cell);
+        };
+        const label = document.createElement('label');
+        label.textContent = type + ' : ';
+
+        cell.appendChild(label);
+        cell.appendChild(removeButton);
+        cell.appendChild(upButton);
+        cell.appendChild(downButton);
+
+        if (type === 'image') {
+            const fileInput = document.createElement('input');
+            fileInput.type = 'file';
+            fileInput.accept = 'image/*';
+            fileInput.addEventListener('change', function () {
+                handleImageUpload(fileInput);
+            });
+
+            const pasteButton = document.createElement('button');
+            pasteButton.id = 'pasteButton';
+            pasteButton.textContent = 'Paste Image';
+            pasteButton.onclick = function () {
+                handlePasteImage(cell);
+            };
+
+            const imagePreview = document.createElement('img');
+            imagePreview.style.display = 'none'; // Initially hide the preview
+
+            const input = document.createElement('input');
+            input.id = 'caption';
+            input.type = 'text';
+            input.placeholder = 'Enter text...';
+            input.value = caption || '';
+
+            cell.appendChild(fileInput);
+            cell.appendChild(pasteButton);
+            cell.appendChild(imagePreview);
+            cell.appendChild(input);
+
+            if (content) {
+                cell.content = content;
+                input.value = caption;
+                imagePreview.src = content;
+                imagePreview.style.display = 'block'; // Show the preview
+            }
+
+        } else if (type === 'text') {
+            const input = document.createElement('textarea'); // Use textarea for long text
+            input.placeholder = 'Enter text...';
+            input.rows = 5; // Set the number of rows as needed
+            input.cols = 90;
+            input.value = content || '';
+
+            input.addEventListener('input', function () {
+                updateCharCount(cell, input);
+            });
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    createCell('text'); // Create a new text cell on Enter key press
+                }
+            });
+
+            setTimeout(() => {
+                input.focus();
+            }, 10);
+
+            const charCount = document.createElement('span');
+            charCount.id = 'charCount';
+            charCount.textContent = input.value.length + ' 글자';
+            cell.appendChild(input);
+            cell.appendChild(charCount);
+
+        } else if (type === "ref") {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Enter text...';
+            input.value = content || '';
+            input.size = 100;
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    createCell('ref'); // Create a new text cell on Enter key press
+                }
+            });
+            setTimeout(() => {
+                input.focus();
+            }, 10);
+            cell.appendChild(input);
+        } else {
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.placeholder = 'Enter text...';
+            input.value = content || '';
+            input.addEventListener('keydown', function (event) {
+                if (event.key === 'Enter' && !event.shiftKey) {
+                    event.preventDefault();
+                    createCell('text'); // Create a new text cell on Enter key press
+                }
+            });
+            cell.appendChild(input);
+        }
+
+        editor.appendChild(cell);
+        cells.push(cell);
+        updateEditor();
+    }
+
+    function removeCell(cell) {
+        const index = cells.indexOf(cell);
+        if (index !== -1) {
+            cells.splice(index, 1);
+            updateCellNumbers();
+            cell.remove();
+            updateEditor();
+        }
+    }
+
+    function updateCellNumbers() {
+    cells.forEach(function (cell, index) {
+        const cellNumber = cell.querySelector('span');
+        if (cellNumber) {
+            cellNumber.textContent = '[' + (index + 1) + ']';
+        }
+    });
+}
+
+    function moveCellUp(cell) {
+        const index = cells.indexOf(cell);
+        if (index > 0) {
+            const temp = cells[index];
+            cells[index] = cells[index - 1];
+            cells[index - 1] = temp;
+
+            updateEditor();
+        }
+    }
+
+    function moveCellDown(cell) {
+        const index = cells.indexOf(cell);
+        if (index < cells.length - 1) {
+            const temp = cells[index];
+            cells[index] = cells[index + 1];
+            cells[index + 1] = temp;
+
+            updateEditor();
+        }
+    }
+
+    function handleImageUpload(fileInput) {
+    const cell = fileInput.closest('.cell');
+    const imagePreview = cell.querySelector('img');
+
+    const file = fileInput.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function (e) {
+            const imageDataUrl = e.target.result;
+
+            // Store the original base64 string in a data attribute
+            cell.content = imageDataUrl
+
+            displayImagePreview(imagePreview, imageDataUrl);
+            updateEditor();
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function handlePasteImage(cell) {
+    document.onpaste = function (pasteEvent) {
+        // Check if clipboard data contains items
+        if (pasteEvent.clipboardData && pasteEvent.clipboardData.items) {
+            // Consider the first item
+            var item = pasteEvent.clipboardData.items[0];
+
+            if (item.type.indexOf("image") === 0) {
+                // Get the image blob
+                var blob = item.getAsFile();
+
+                // Create a FileReader
+                var reader = new FileReader();
+
+                // Set the onload event handler
+                reader.onload = function (event) {
+                    // Get the data URL of the image
+                    let imageDataUrl = event.target.result;
+
+                    // Store the original base64 string in a data attribute
+                    cell.content = imageDataUrl;
+
+                    // Get the image preview element
+                    const imagePreview = cell.querySelector('img');
+
+                    // Display the image preview
+                    displayImagePreview(imagePreview, imageDataUrl);
+
+                    // Update the editor
+                    updateEditor();
+                };
+
+                // Read the blob as a data URL
+                reader.readAsDataURL(blob);
+            }
+        }
+    };
+}
+
+    function displayImagePreview(imagePreview, imageDataUrl) {
+        imagePreview.src = imageDataUrl;
+        imagePreview.style.display = 'block'; // Show the preview
+    }
+
+    function updateEditor() {
+        const editor = document.getElementById('editor');
+        // Clear the editor
+        editor.innerHTML = '';
+        // Rebuild the editor content based on the updated order
+        cells.forEach(function (cell) {
+            editor.appendChild(cell);
+        });
+    }
+
+
+    function updateCharCount(cell, input) {
+    const charCount = cell.querySelector('#charCount');
+    charCount.textContent = input.value.length + ' characters';
+}
+
+function downloadJson() {
+        const fileName = document.getElementById('file-name').value;
+        if (fileName === "") {
+            alert("파일 이름을 입력하세요");
+            return
+        }
+        const confirmResponse = confirm('현재 입력창의 모든 정보가 ' + fileName + ' 이름으로 저장됩니다. (기존 정보는 덮어씌워집니다) 계속 하시겠습니까?');
+        if (confirmResponse) {
+            let metadata = {};
+        metadata['reportName'] = document.getElementById('reportName').value;
+        metadata['reportNameEng'] = document.getElementById('reportNameEng').value;
+        metadata['students'] = document.getElementById('students').value;
+        metadata['startDate'] = document.getElementById('startDate').value;
+        metadata['endDate'] = document.getElementById('endDate').value;
+        metadata['keyWords'] = document.getElementById('keyWords').value;
+
+        const data = {
+            metadata: metadata,
+            contents: []
+        };
+
+        cells.forEach(function (cell) {
+            const type = cell.id.split('_')[0];
+
+            if (type === 'image') {
+                const caption_box = cell.querySelector('#caption');
+                const caption = caption_box ? caption_box.value : '';
+                const content = cell.content || '';
+                console.log(caption);
+                data.contents.push({
+                    type: type,
+                    content: content,
+                    caption: caption
+                });
+            } else if (type === 'text') {
+                const input = cell.querySelector('textarea'); // Update to 'textarea'
+                const content = input ? input.value : ''; // Check if input is not null
+                data.contents.push({
+                    type: type,
+                    content: content
+                });
+            } else {
+                const input = cell.querySelector('input');
+                const content = input ? input.value : '';
+                data.contents.push({
+                    type: type,
+                    content: content
+                });
+            }
+        });
+        console.log(data);
+        fetch('/total_report/' + fileName + queryString, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => response.json())
+            .then(response => {
+                alert(response.message);
+                window.location.reload();
+            })
+        }
+
+    }
+
+    function clearEditor() {
+        const confirmResponse = confirm('현재 입력창의 정보가 전부 지워집니다. (저장된 정보는 지워지지 않습니다) 계속 하시겠습니까?')
+        if (confirmResponse) {
+            const editor = document.getElementById('editor');
+            editor.innerHTML = '';
+            cells = [];
+            document.getElementById('file-name').value = ''
+            document.getElementById('reportMetadata').reset();
+            updateDropdown();
+        }
+    }
+
+    document.addEventListener('input', function (event) {
+        const target = event.target;
+
+        if (target.tagName.toLowerCase() === 'textarea') {
+            adjustTextareaHeight(target);
+        }
+    });
+
+    function adjustTextareaHeight(textarea) {
+        textarea.style.height = 'auto'; // Reset height to auto
+        textarea.style.height = (textarea.scrollHeight + 2) + 'px'; // Set the height based on content
+    }
+
+    function updateStudentList() {
+        fetch('/classdata/' + mentor_code, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({'school_name' : school_name})
+        }).then(response => response.json())
+            .then(response => {
+                response.students.forEach(student => {
+                    const studentNum = Object.keys(student)[0];
+                    const studentName = student[studentNum];
+                    const row = document.createElement('tr');
+                        row.innerText = studentNum + ' ' + studentName;
+                    if (response.report_status[studentNum]['final_report'] === "Yes") {
+                        const table = document.getElementById('isSubmitted');
+                        table.appendChild(row);
+                    } else {
+                        const table = document.getElementById('isNotSubmitted');
+                        table.appendChild(row);
+                    }
+                });
+            })
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+            // Get the table element
+            var isSubmittedTable = document.getElementById('isSubmitted');
+
+            // Add click event listener to the rows of isSubmitted table
+            isSubmittedTable.addEventListener('click', function (event) {
+                var target = event.target;
+                if (target.tagName === 'TR') {
+                    // Do something on single click
+                    fetch('/student_id/' + mentor_code, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            'school_name' : school_name,
+                            'student_number' : target.innerText.split(' ')[0]
+                        })
+                    }).then(response => response.json())
+                        .then(response => {
+                            const student_id = response.student_id;
+                            let query_string = '?mentor_code=' + mentor_code + '&school_code=' + school_code + '&student_code=' + student_id;
+                            fetch('/final_report' + query_string, {
+                                method: 'GET',
+                            }).then(response => response.json())
+                                .then(response => {
+                                    const previewDiv = document.getElementById('preview');
+                                    previewDiv.innerHTML = `<p>보고서 미리보기</p>`
+                                    response.contents.forEach(elem => {
+                                        if (elem.type === 'text' || elem.type === 'h7') {
+                                            const content = document.createElement('p');
+                                            content.innerText = elem.content;
+                                            previewDiv.appendChild(content);
+                                        } else if (elem.type === 'image') {
+                                            const content = document.createElement('p');
+                                            content.innerText = elem.caption;
+                                            previewDiv.appendChild(content);
+                                        } else {
+                                            const content = document.createElement(elem.type);
+                                            content.innerText = elem.content;
+                                            previewDiv.appendChild(content);
+                                        }
+                                    });
+                                })
+                        })
+                }
+            });
+
+            // Add double click event listener to the rows of isSubmitted table
+            isSubmittedTable.addEventListener('dblclick', function (event) {
+                var target = event.target;
+                if (target.tagName === 'TR') {
+                    // Do something on double click
+                    fetch('/student_id/' + mentor_code, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify({
+                            'school_name' : school_name,
+                            'student_number' : target.innerText.split(' ')[0]
+                        })
+                    }).then(response => response.json())
+                        .then(response => {
+                            const student_id = response.student_id;
+                            let query_string = '?mentor_code=' + mentor_code + '&school_code=' + school_code + '&student_code=' + student_id;
+                            fetch('/final_report' + query_string, {
+                                method: 'GET',
+                            }).then(response => response.json())
+                                .then(response => {
+                                    response.contents.forEach(function (content) {
+                                        if (content.type === 'image') {
+                                            createCell(content.type, content.content, content.caption);
+                                        } else {
+                                            createCell(content.type, content.content);
+                                        }
+                                    });
+                                })
+                        })
+                }
+            });
+        });
+
+    function updateDropdown() {
+        const dropdown = document.getElementById('files');
+        dropdown.innerHTML = ''
+        fetch('/total_report/dropdown' + queryString, {
+            method: 'GET'
+        }).then(response => response.json())
+            .then(response => {
+                console.log(response);
+                response.files.forEach(file => {
+                    dropdown.innerHTML += `<option>${file}</option>`;
+                });
+        })
+
+    }
+
+    fileNameInput.addEventListener('focusout', function (event) {
+        const text = event.target.value;
+        if (text.length != 0) {
+            fetch('/total_report/' + text + queryString, {
+                method: 'GET'
+            }).then(response => response.json())
+                .then(response => {
+                    if (response.message === "Success") {
+                        Object.keys(response.data.metadata).forEach(key => {
+                            document.getElementById(key).value = response.data.metadata[key];
+                        });
+                        response.data.contents.forEach(function (content) {
+                            if (content.type === 'image') {
+                                createCell(content.type, content.content, content.caption);
+                            } else {
+                                createCell(content.type, content.content);
+                            }
+                        });
+                        document.getElementById('exportButton').style.display= 'block';
+                    } else {
+                        const editor = document.getElementById('editor');
+                        editor.innerHTML = '';
+                        cells = [];
+                        document.getElementById('reportMetadata').reset();
+                        updateDropdown();
+                        document.getElementById('exportButton').style.display= 'none';
+                    }
+                })
+        }
+    })
+
+    function downloadDocx() {
+        const name = prompt("파일 이름을 입력해주세요 (확장자 제외)");
+        if (!name) {
+            alert('파일 이름을 입력해주세요');
+            return;
+        }
+        const data = {
+            report_name: document.getElementById('file-name').value,
+            file_name: name
+        };
+        fetch('/export_total_report' + queryString, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => {
+
+                const contentDisposition = response.headers.get('Content-Disposition');
+                const filename = getFileNameFromHeader(contentDisposition);
+
+                if (!filename) {
+                    throw new Error('Filename not found in Content-Disposition header');
+                }
+                // Create a link element
+                response.blob().then(blob => {
+                    const link = document.createElement('a');
+                    link.href = window.URL.createObjectURL(blob);
+                    link.download = filename;
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                });
+            })
+    }
+
+    function getFileNameFromHeader(header) {
+            const matches = header.match(/filename\*?=(.*''){0,1}([^;\r\n]*)/);
+            if (matches && matches.length > 2) {
+                return decodeURIComponent(matches[2]);
+            }
+            return null;
+        }
+
+    updateStudentList();
+    updateDropdown();
+
+
+
+
+
+</script>
+
+</body>
+</html>
