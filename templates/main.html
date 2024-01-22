@@ -74,7 +74,7 @@
     input,
     textarea {
         font-family: Arial, sans-serif;
-        font-size: 20px;
+        font-size: 15px;
         box-sizing: border-box; /* Include padding and border in the element's total width and height */
     }
 
@@ -83,7 +83,7 @@
     }
 
     #guideline {
-        width: 45%;
+        width: 35%;
         height: 100%;
         padding: 10px;
         background-color: #f2f2f2;
@@ -93,7 +93,7 @@
     }
 
     #main {
-        width: 50%;
+        width: 60%;
         height: 100%;
         flex-grow: 1;
         padding: 10px;
@@ -114,6 +114,7 @@
 <button id="switchTypeButton" onclick="switchType()"> 자기활동평가서 열기 </button>
 <div id="main">
     <div id="final-report">
+    <strong>전체 글자 수(제목 제외) : <span id="totalChar"></span> 글자</strong>
 <div id="editor"></div>
 
 <div>
@@ -133,8 +134,9 @@
     </div>
 
 <div id="self-eval-div" style="display: none">
-    <textarea id="self-eval" rows="10" cols="60" placeholder="자기활동평가서 작성 칸">
-    </textarea>
+    <strong>전체 글자 수(공백 포함) : <span id="totalCharEval"></span> 글자</strong><br>
+    <textarea id="self-eval" rows="10" cols="80" placeholder="자기활동평가서 작성 칸">
+    </textarea><br>
     <button id="submitSelfEvalButton" onclick="submitEval()">자기활동평가서 저장하기</button>
 </div>
 </div>
@@ -156,7 +158,17 @@
     let student_code = getQueryParam('student_code');
     let query_string = '?mentor_code=' + mentor_code + '&school_code=' + school_code + '&student_code=' + student_code;
     let isReport = true;
-    console.log(mentor_code, school_code, student_code);
+    let totalCharCounter = 0;
+
+    function updateTotalChar() {
+        totalCharCounter = 0;
+        cells.forEach(cell => {
+           if (cell.id.split('_')[0] === 'text') {
+               totalCharCounter += cell.querySelector("textarea").value.length;
+           }
+        });
+        document.getElementById('totalChar').innerText = totalCharCounter;
+    }
 
     function switchType() {
         if (isReport) {
@@ -212,10 +224,14 @@
         const label = document.createElement('label');
         label.textContent = type + ' : ';
 
+        const nl = document.createElement('span');
+        nl.innerHTML = `<br>`;
+
         cell.appendChild(label);
         cell.appendChild(removeButton);
         cell.appendChild(upButton);
         cell.appendChild(downButton);
+        cell.appendChild(nl);
 
         if (type === 'image') {
             const fileInput = document.createElement('input');
@@ -257,11 +273,12 @@
             const input = document.createElement('textarea'); // Use textarea for long text
             input.placeholder = 'Enter text...';
             input.rows = 5; // Set the number of rows as needed
-            input.cols = 90;
+            input.cols = 78;
             input.value = content || '';
 
             input.addEventListener('input', function () {
                 updateCharCount(cell, input);
+                updateTotalChar();
             });
             input.addEventListener('keydown', function (event) {
                 if (event.key === 'Enter' && !event.shiftKey) {
@@ -322,6 +339,7 @@
             updateCellNumbers();
             cell.remove();
             updateEditor();
+            updateTotalChar();
         }
     }
 
@@ -329,7 +347,7 @@
     cells.forEach(function (cell, index) {
         const cellNumber = cell.querySelector('span');
         if (cellNumber) {
-            cellNumber.textContent = 'Cell ' + (index + 1) + ': ';
+            cellNumber.textContent = '[' + (index + 1) + ']';
         }
     });
 }
@@ -428,18 +446,20 @@ function handlePasteImage(cell) {
         cells.forEach(function (cell) {
             editor.appendChild(cell);
         });
+        updateTotalChar();
     }
 
 
     function updateCharCount(cell, input) {
-    const charCount = cell.querySelector('#charCount');
-    charCount.textContent = input.value.length + ' 글자';
-}
+        const charCount = cell.querySelector('#charCount');
+        charCount.textContent = input.value.length + ' 글자';
+    }
 
 function submitReport() {
 
         const data = {
             type: "report",
+            total_char: totalCharCounter,
             contents: []
         };
 
@@ -501,6 +521,7 @@ function submitReport() {
                     }
                 })
                 document.getElementById('self-eval').value = data.eval;
+                document.getElementById('totalCharEval').innerText = data.eval.length;
             })
     }
 
@@ -536,6 +557,9 @@ function submitReport() {
 
         if (target.tagName.toLowerCase() === 'textarea') {
             adjustTextareaHeight(target);
+        }
+        if (target.id === 'self-eval') {
+            document.getElementById('totalCharEval').innerText = target.value.length;
         }
     });
 

@@ -141,7 +141,7 @@
         }
 
         .ui-btn:hover {
-            background-color: gray;
+            background-color: grey;
         }
 
         #school-info {
@@ -261,7 +261,7 @@
                 </section>
 
                 <section id="attendanceSection">
-                    <h2>출결 현황</h2>
+                    <h2>출결 현황 <button class="ui-btn" id="newStudentButton" onclick="addStudent()">학생 추가하기</button></h2>
                     <form id="AttendanceForm" method="post">
 
                         <input type="hidden" id="schoolNameAttendance" name="schoolName">
@@ -269,7 +269,7 @@
 
                         </table>
 
-                        <input type="submit" class="save-btn" value="출결 저장하기">
+                        <input type="submit" class="save-btn" id="saveAttendanceButton" value="출결 저장하기">
                     </form>
                 </section>
 
@@ -358,8 +358,10 @@
                         <label for="reportTopic">활동 주제: </label>
                         <input type="text" size="90" id="reportTopic"><br>
                         <label for="self-eval-preview">멘티 작성란: </label><br>
+                        <strong>멘티 작성 글자 수 (공백 포함) : <span id="totalCharMentee"></span> 자</strong><br>
                         <textarea id="self-eval-preview" cols="90" rows="10"></textarea><br>
                         <label for="self-eval-rev">멘토 수정란: </label><br>
+                        <strong>멘토 작성 글자 수 (공백 포함) : <span id="totalCharMentor"></span> 자</strong><br>
                         <select id="classAttitude">
                             <option value="상">상</option>
                             <option value="중">중</option>
@@ -484,6 +486,7 @@
                             <th>등록 여부</th>
                             <th>비밀번호</th>
                             <th>최종보고서</th>
+                            <th>최종보고서 글자 수</th>
                             <th>자기활동평가서</th>
                             <th>자기활동평가서 수정(멘토)</th>
                             <th></th>
@@ -503,13 +506,20 @@
 
                     const tableRow = document.createElement('tr');
                     const reportTableRow = document.createElement('tr');
-                    tableRow.innerHTML = `<td><input type="text" size="5" name="student-number-${studentCounter}" value="${studentNumber}"></td><td><input type="text" size="8" name="student-name-${studentCounter}" value="${studentName}"></td>`;
+                    tableRow.id = "row-" + studentNumber
+                    reportTableRow.id = "report-" + studentNumber
+                    tableRow.innerHTML = `
+                            <td><input type="text" size="5" name="student-number-${studentNumber}" value="${studentNumber}"></td>
+                            <td><input type="text" size="8" name="student-name-${studentNumber}" value="${studentName}"><br>
+                                <button id="student-del-${studentNumber}" onclick="deleteStudent(${studentNumber}, ${studentName})">학생 삭제</button></td>
+                            `;
                     reportTableRow.innerHTML = `
                         <td>${studentNumber}</td>
                         <td>${studentName}</td>
                         <td id="isRegistered-${studentNumber}"></td>
                         <td id="studentPassword-${studentNumber}"></td>
                         <td id="isFinalReport-${studentNumber}"></td>
+                        <td id="finalReportChar-${studentNumber}"></td>
                         <td id="isSelfEval-${studentNumber}"></td>
                         <td id="isSelfEvalRev-${studentNumber}"></td>
                         <td><button id="revButton-${studentNumber}" onclick="viewRev('${studentNumber}', '${studentName}')">자기활동평가서 수정하기</button></td>
@@ -583,6 +593,7 @@
                             document.getElementById('isRegistered-' + key).innerText = response.report_status[key]['registered'];
                             document.getElementById('studentPassword-' + key).innerText = response.report_status[key]['password'];
                             document.getElementById('isFinalReport-' + key).innerText = response.report_status[key]['final_report'];
+                            document.getElementById('finalReportChar-' + key).innerText = response.report_status[key]['final_report_char'];
                             document.getElementById('isSelfEval-' + key).innerText = response.report_status[key]['self_evaluation'];
                             document.getElementById('isSelfEvalRev-' + key).innerText = response.report_status[key]['self_evaluation_revised'];
                         })
@@ -785,6 +796,8 @@ document.onpaste = function(pasteEvent) {
                     }).then(response => response.json())
                         .then(response => {
                             document.getElementById('self-eval-preview').value = response['eval'];
+                            document.getElementById('totalCharMentee').innerText = response['eval'].length;
+                            document.getElementById('totalCharMentor').innerText = response.eval_revised['text'].length;
                             document.getElementById('classAttitude').value = response.eval_revised.class_attitude;
                             document.getElementById('self-eval-rev').value = response.eval_revised.text;
                             document.getElementById('classAttitudeDetail').value = response.eval_revised.class_attitude_detail;
@@ -896,6 +909,49 @@ document.onpaste = function(pasteEvent) {
             document.body.removeChild(tempInput);
             alert('클립보드에 복사되었습니다!')
         }
+
+        function deleteStudent(studentNumber, studentName) {
+            let yay = confirm("정말로 " + studentNumber + " " + studentName + "학생을 삭제하시겠습니까?");
+            if (yay) {
+                document.getElementById('AttendanceTable').removeChild(document.getElementById('row-' + studentNumber.toString()));
+                document.getElementById('reportTable').removeChild(document.getElementById('report-' + studentNumber.toString()));
+                const queryString = '?mentor_code=' + uuid + '&school_code=' + school_id;
+                fetch('/delete_student' + queryString, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({"student_num": studentNumber})
+                }).then(response => response.json())
+                    .then(response => {
+                        alert(response.message);
+                    })
+            }
+
+        }
+
+        function addStudent() {
+            let studentNumber = prompt("추가할 학생의 학번을 입력해주세요");
+            let studentName = prompt("추가할 학생의 이름을 입력해주세요");
+            const queryString = '?mentor_code=' + uuid + '&school_code=' + school_id;
+                fetch('/add_student' + queryString, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({"student_num": studentNumber, "student_name": studentName})
+                }).then(response => response.json())
+                    .then(response => {
+                        alert(response.message);
+                        window.location.reload();
+                    })
+        }
+
+        document.addEventListener('input', function (event) {
+            if (event.target.id === 'self-eval-rev') {
+                document.getElementById('totalCharMentor').innerText = event.target.value.length;
+            }
+        })
         // Initial fetch when the page loads (you may want to call this with a specific mentor value)
         fetchSchools();
     </script>

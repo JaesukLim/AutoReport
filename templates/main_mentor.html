@@ -74,7 +74,7 @@
     input,
     textarea {
         font-family: Arial, sans-serif;
-        font-size: 20px;
+        font-size: 15px;
         box-sizing: border-box; /* Include padding and border in the element's total width and height */
     }
 
@@ -83,7 +83,7 @@
     }
 
     #guideline {
-        width: 45%;
+        width: 35%;
         height: 100%;
         padding: 10px;
         background-color: #f2f2f2;
@@ -93,7 +93,7 @@
     }
 
     #main {
-        width: 50%;
+        width: 60%;
         height: 100%;
         flex-grow: 1;
         padding: 10px;
@@ -138,6 +138,21 @@
         float: left;
         overflow: auto;
     }
+
+
+    tr:nth-child(even) {
+        background-color: lightgray;
+    }
+
+    tr:nth-child(odd) {
+        background-color: white;
+    }
+
+    tr:hover {
+        background-color: grey;
+    }
+
+
 </style>
 
 
@@ -145,14 +160,14 @@
 <body>
 
 <div id="main">
-    <label for="file-name">파일 이름 (새로 입력하거나 선택하기)</label>
-    <input type="text" id="file-name" value="" list="files">
-    <datalist id="files">
-    </datalist>
-    <button id="clearButton" onclick="clearEditor()">새로 만들기</button>
+    <label for="files">파일 이름 (새로 입력하거나 선택하기)</label>
+    <select type="text" id="files" onchange="getCurrentReport()">
+    </select>
+    <button id="newReportButton" onclick="addNewReport()">새 보고서 만들기</button>
+    <button id="clearButton" onclick="clearEditor()">입력창 초기화</button>
+    <strong>전체 글자 수(제목 제외) : <span id="totalChar"></span> 글자</strong>
 <div id="editor"></div>
-<div>
-    <button onclick="createCell('h1')">I. / 수준 1</button>
+<div>자
     <button onclick="createCell('h2')">1. / 수준 2</button>
     <button onclick="createCell('h3')">가. / 수준 3</button>
     <button onclick="createCell('h4')">1) / 수준 4</button>
@@ -205,11 +220,13 @@
 <script>
     let cells = [];
     let cellCounter = 0;
+    let totalCharCounter = 0;
     let mentor_code = getQueryParam('mentor_code');
     let school_name = getQueryParam('school_name');
     let school_code = getQueryParam('school_code');
-    const fileNameInput = document.getElementById('file-name');
+    const fileNameInput = document.getElementById('files');
     const queryString = '?mentor_code=' + mentor_code + '&school_code=' + school_code;
+
 
     function getQueryParam(name) {
             const urlParams = new URLSearchParams(window.location.search);
@@ -251,10 +268,14 @@
         const label = document.createElement('label');
         label.textContent = type + ' : ';
 
+        const nl = document.createElement('span');
+        nl.innerHTML = `<br>`;
+
         cell.appendChild(label);
         cell.appendChild(removeButton);
         cell.appendChild(upButton);
         cell.appendChild(downButton);
+        cell.appendChild(nl);
 
         if (type === 'image') {
             const fileInput = document.createElement('input');
@@ -296,11 +317,12 @@
             const input = document.createElement('textarea'); // Use textarea for long text
             input.placeholder = 'Enter text...';
             input.rows = 5; // Set the number of rows as needed
-            input.cols = 90;
+            input.cols = 78;
             input.value = content || '';
 
             input.addEventListener('input', function () {
                 updateCharCount(cell, input);
+                updateTotalChar();
             });
             input.addEventListener('keydown', function (event) {
                 if (event.key === 'Enter' && !event.shiftKey) {
@@ -361,6 +383,7 @@
             updateCellNumbers();
             cell.remove();
             updateEditor();
+            updateTotalChar();
         }
     }
 
@@ -467,16 +490,18 @@ function handlePasteImage(cell) {
         cells.forEach(function (cell) {
             editor.appendChild(cell);
         });
+        console.log(cells);
+        updateTotalChar();
     }
 
 
     function updateCharCount(cell, input) {
-    const charCount = cell.querySelector('#charCount');
-    charCount.textContent = input.value.length + ' characters';
-}
+        const charCount = cell.querySelector('#charCount');
+        charCount.textContent = input.value.length + ' 글자';
+    }
 
 function downloadJson() {
-        const fileName = document.getElementById('file-name').value;
+        const fileName = fileNameInput.value;
         if (fileName === "") {
             alert("파일 이름을 입력하세요");
             return
@@ -535,7 +560,7 @@ function downloadJson() {
         }).then(response => response.json())
             .then(response => {
                 alert(response.message);
-                window.location.reload();
+                updateDropdown();
             })
         }
 
@@ -555,7 +580,6 @@ function downloadJson() {
 
     document.addEventListener('input', function (event) {
         const target = event.target;
-
         if (target.tagName.toLowerCase() === 'textarea') {
             adjustTextareaHeight(target);
         }
@@ -689,13 +713,17 @@ function downloadJson() {
 
     }
 
-    fileNameInput.addEventListener('focusout', function (event) {
-        const text = event.target.value;
+    function getCurrentReport() {
+        const text = fileNameInput.value;
         if (text.length != 0) {
             fetch('/total_report/' + text + queryString, {
                 method: 'GET'
             }).then(response => response.json())
                 .then(response => {
+                    const editor = document.getElementById('editor');
+                    editor.innerHTML = '';
+                    cells = [];
+                    document.getElementById('reportMetadata').reset();
                     if (response.message === "Success") {
                         Object.keys(response.data.metadata).forEach(key => {
                             document.getElementById(key).value = response.data.metadata[key];
@@ -709,16 +737,12 @@ function downloadJson() {
                         });
                         document.getElementById('exportButton').style.display= 'block';
                     } else {
-                        const editor = document.getElementById('editor');
-                        editor.innerHTML = '';
-                        cells = [];
-                        document.getElementById('reportMetadata').reset();
                         updateDropdown();
                         document.getElementById('exportButton').style.display= 'none';
                     }
                 })
         }
-    })
+    }
 
     function downloadDocx() {
         const name = prompt("파일 이름을 입력해주세요 (확장자 제외)");
@@ -727,7 +751,7 @@ function downloadJson() {
             return;
         }
         const data = {
-            report_name: document.getElementById('file-name').value,
+            report_name: fileNameInput.value,
             file_name: name
         };
         fetch('/export_total_report' + queryString, {
@@ -763,6 +787,36 @@ function downloadJson() {
             }
             return null;
         }
+
+    function addNewReport() {
+        const name = prompt("보고서 이름을 입력해주세요");
+        if (!name) {
+            alert('파일 이름을 입력해주세요');
+            return;
+        }
+        fetch('/total_report/' + name + queryString, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({})
+        }).then(response => response.json())
+            .then(response => {
+                alert(response.message);
+                updateDropdown();
+                fileNameInput.value = name;
+            })
+    }
+
+    function updateTotalChar() {
+        totalCharCounter = 0;
+        cells.forEach(cell => {
+           if (cell.id.split('_')[0] === 'text') {
+               totalCharCounter += cell.querySelector("textarea").value.length;
+           }
+        });
+        document.getElementById('totalChar').innerText = totalCharCounter;
+    }
 
     updateStudentList();
     updateDropdown();

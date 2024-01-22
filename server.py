@@ -97,7 +97,12 @@ def add_school_and_student(mentor_uuid):
         uuid_student_num = {}
         for i in range(1, ((len(data) - 2) // 2) + 1):
             students.append({data["student-number-" + str(i)] : data["student-name-" + str(i)]})
-            report[data["student-number-" + str(i)]] = {"registered": "No", "final_report": "No", "self_evaluation": "No", "self_evaluation_revised": "No", "password": ""}
+            report[data["student-number-" + str(i)]] = {"registered": "No",
+                                                        "final_report": "No",
+                                                        "final_report_char": 0,
+                                                        "self_evaluation": "No",
+                                                        "self_evaluation_revised": "No",
+                                                        "password": ""}
             temp_uuid = str(uuid.uuid4())[:8]
             student_num_uuid[data["student-number-" + str(i)]] = temp_uuid
             uuid_student_num[temp_uuid] = data["student-number-" + str(i)]
@@ -141,7 +146,6 @@ def get_students(mentor_uuid):
 @app.route('/metadata/<mentor_uuid>', methods=['POST'])
 def get_class_metadata(mentor_uuid):
     data = request.form
-    print(data)
     school_dir = os.path.join('assets', mentor_uuid, data['schoolName'], 'metadata.json')
     with open(school_dir, 'r') as f:
         school_metadata = json.load(f)
@@ -364,7 +368,7 @@ def final_report():
             with open(os.path.join('assets', mentor_uuid, school_name, file_name), 'r') as f:
                 saved_data = json.load(f)
         else:
-            saved_data = {"contents": [], "eval": '', "eval_revised": ""}
+            saved_data = {"contents": [], "eval": '', "eval_revised": {"text": "", "class_attitude": "중", "class_attitude_detail": "", "report_topic": ""}}
         return jsonify(saved_data)
 
     else:
@@ -385,10 +389,17 @@ def final_report():
             with open(os.path.join('assets', mentor_uuid, school_name, file_name), 'r') as f:
                 save_data = json.load(f)
         else:
-            save_data = {"contents": [], "eval": '', "eval_revised": {"text": "", "class_attitude": "중", "class_attitude_detail": "", "report_topic" : ""}}
+            save_data = {"contents": [],
+                         "eval": '',
+                         "eval_revised": {"text": "",
+                                          "class_attitude": "중",
+                                          "class_attitude_detail": "",
+                                          "report_topic" : ""}
+                         }
 
         if data['type'] == 'report':
             save_data['contents'] = data['contents']
+            metadata['report_status'][student_num]['final_report_char'] = data['total_char']
             metadata['report_status'][student_num]['final_report'] = 'Yes'
         elif data['type'] == 'eval':
             save_data['eval'] = data['content']
@@ -414,6 +425,8 @@ def delete_school(mentor_uuid):
     school_id = school_ids['school_uuid'][school_name]
     school_ids['school_uuid'].pop(school_name)
     school_ids['uuid_school'].pop(school_id)
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'w') as f:
+        json.dump(school_ids, f)
     shutil.rmtree(os.path.join('assets', mentor_uuid, school_name))
     return jsonify({"message" : "Success"})
 
@@ -569,6 +582,66 @@ def export_self_eval():
     final_dir = os.path.join('assets', mentor_uuid, school_name, '자기활동평가서_' + student_name + '.docx')
     doc.save(final_dir)
     return send_file(final_dir, download_name='자기활동평가서_' + student_name + '.docx', as_attachment=True)
+
+@app.route('/delete_student', methods=['POST'])
+def delete_student():
+    mentor_uuid = request.args['mentor_code']
+    school_uuid = request.args['school_code']
+    student_num = str(request.json['student_num'])
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+        metadata = json.load(f)
+
+    if os.path.exists(os.path.join('assets', mentor_uuid, school_name, student_num + '_report.json')):
+        os.remove(os.path.join('assets', mentor_uuid, school_name, student_num + '_report.json'))
+
+    for elem in metadata['students']:
+        if list(elem.keys())[0] == student_num:
+            metadata['students'].remove(elem)
+            break
+
+    for k in list(metadata['attendance'].keys()):
+        if str(student_num) in k:
+            print(k)
+            metadata['attendance'].pop(k)
+
+    metadata['report_status'].pop(student_num)
+    student_uuid = metadata['student_num_uuid'][student_num]
+    metadata['student_num_uuid'].pop(student_num)
+    metadata['uuid_student_num'].pop(student_uuid)
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'w') as f:
+        json.dump(metadata, f)
+    return jsonify({"message" : "성공적으로 삭제했습니다!"})
+
+@app.route('/add_student', methods=['POST'])
+def add_student():
+    mentor_uuid = request.args['mentor_code']
+    school_uuid = request.args['school_code']
+    student_num = str(request.json['student_num'])
+    student_name = request.json['student_name']
+
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+        metadata = json.load(f)
+
+    metadata['students'].append({student_num: student_name})
+    metadata['report_status'][student_num] = {"registered": "No",
+                                            "final_report": "No",
+                                            "final_report_char": 0,
+                                            "self_evaluation": "No",
+                                            "self_evaluation_revised": "No",
+                                            "password": ""}
+    temp_uuid = str(uuid.uuid4())[:8]
+    metadata['student_num_uuid'][student_num] = temp_uuid
+    metadata['uuid_student_num'][temp_uuid] = student_num
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'w') as f:
+        metadata = json.dump(metadata, f)
+
+    return jsonify({"message": "성공적으로 저장되었습니다!"})
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5002, debug=False)
