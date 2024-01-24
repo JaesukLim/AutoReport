@@ -233,10 +233,10 @@ def get_class_report(mentor_uuid):
                     status_str = 'O'
                 elif metadata['attendance'][key] == '결석':
                     status_str = 'X'
-                elif metadata['attendance'][key] == '지각':
+                elif metadata['attendance'][key] == '지각' or metadata['attendance'][key] == '조퇴':
                     status_str = metadata['attendance'][key]
 
-                if status_str == 'X' or status_str == '지각':
+                if status_str != 'O':
                     status_str += '\n(' + metadata['attendance']['reason-' + student_number + '-' + str(col_num)] + ')'
                 doc.tables[3].rows[cur_row].cells[col_num + 1].paragraphs[0].text = status_str
             elif 'time-' in key:
