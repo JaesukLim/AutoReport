@@ -149,7 +149,7 @@
         }
 
         .image-cell {
-            width: 500px;
+            width: 600px;
             padding: 5px;
             margin: 10px;
             background: lightgray;
@@ -280,60 +280,70 @@
                             <label for="fileInput1">1차시:</label>
                             <input type="file" accept="image/*" name="screenshot1" id="fileInput1" onchange="previewImage(1)">
                             <button type="button" onclick="setActiveCell(1)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(1)">이미지 삭제하기</button>
                             <div id="preview1" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput2">2차시:</label>
                             <input type="file" accept="image/*" name="screenshot2" id="fileInput2" onchange="previewImage(2)">
                             <button type="button" onclick="setActiveCell(2)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(2)">이미지 삭제하기</button>
                             <div id="preview2" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput3">3차시:</label>
                             <input type="file" accept="image/*" name="screenshot3" id="fileInput3" onchange="previewImage(3)">
                             <button type="button" onclick="setActiveCell(3)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(3)">이미지 삭제하기</button>
                             <div id="preview3" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput4">4차시:</label>
                             <input type="file" accept="image/*" name="screenshot4" id="fileInput4" onchange="previewImage(4)">
                             <button type="button" onclick="setActiveCell(4)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(4)">이미지 삭제하기</button>
                             <div id="preview4" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput5">5차시:</label>
                             <input type="file" accept="image/*" name="screenshot5" id="fileInput5" onchange="previewImage(5)">
                             <button type="button" onclick="setActiveCell(5)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(5)">이미지 삭제하기</button>
                             <div id="preview5" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput6">6차시:</label>
                             <input type="file" accept="image/*" name="screenshot6" id="fileInput6" onchange="previewImage(6)">
                             <button type="button" onclick="setActiveCell(6)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(6)">이미지 삭제하기</button>
                             <div id="preview6" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput7">7차시:</label>
                             <input type="file" accept="image/*" name="screenshot7" id="fileInput7" onchange="previewImage(7)">
                             <button type="button" onclick="setActiveCell(7)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(7)">이미지 삭제하기</button>
                             <div id="preview7" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput8">8차시:</label>
                             <input type="file" accept="image/*" name="screenshot8" id="fileInput8" onchange="previewImage(8)">
                             <button type="button" onclick="setActiveCell(8)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(8)">이미지 삭제하기</button>
                             <div id="preview8" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput9">오프라인 1:</label>
                             <input type="file" accept="image/*" name="screenshot9" id="fileInput9" onchange="previewImage(9)">
                             <button type="button" onclick="setActiveCell(9)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(9)">이미지 삭제하기</button>
                             <div id="preview9" class="image-preview"></div>
                         </div>
                         <div class="image-cell">
                             <label for="fileInput10">오프라인 2:</label>
                             <input type="file" accept="image/*" name="screenshot10" id="fileInput10" onchange="previewImage(10)">
                             <button type="button" onclick="setActiveCell(10)">이미지 붙여넣기</button>
+                            <button type="button" onclick="delCellImage(10)">이미지 삭제하기</button>
                             <div id="preview10" class="image-preview"></div>
                         </div>
 
@@ -511,7 +521,7 @@
                     tableRow.innerHTML = `
                             <td><input type="text" size="5" name="student-number-${studentNumber}" value="${studentNumber}"></td>
                             <td><input type="text" size="8" name="student-name-${studentNumber}" value="${studentName}"><br>
-                                <button id="student-del-${studentNumber}" onclick="deleteStudent(${studentNumber}, ${studentName})">학생 삭제</button></td>
+                                <button id="student-del-${studentNumber}" onclick="deleteStudent('${studentNumber}', '${studentName}')">학생 삭제</button></td>
                             `;
                     reportTableRow.innerHTML = `
                         <td>${studentNumber}</td>
@@ -742,6 +752,13 @@ document.onpaste = function(pasteEvent) {
         reader.readAsDataURL(blob);
     }
 };
+
+        function delCellImage(cell) {
+            const previewDiv = document.getElementById(`preview${cell}`);
+            previewDiv.innerHTML = '';
+            delete selectedImages[`${cell}`];
+        }
+
         function exportToDocx() {
             const name = prompt("파일 이름을 입력해주세요 (확장자 제외)");
             if (!name) {
@@ -911,7 +928,7 @@ document.onpaste = function(pasteEvent) {
         }
 
         function deleteStudent(studentNumber, studentName) {
-            let yay = confirm("정말로 " + studentNumber + " " + studentName + "학생을 삭제하시겠습니까?");
+            let yay = confirm("정말로 " + studentNumber + " " + studentName + " 학생을 삭제하시겠습니까?");
             if (yay) {
                 document.getElementById('AttendanceTable').removeChild(document.getElementById('row-' + studentNumber.toString()));
                 document.getElementById('reportTable').removeChild(document.getElementById('report-' + studentNumber.toString()));

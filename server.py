@@ -157,7 +157,6 @@ def get_class_metadata(mentor_uuid):
 @app.route('/attendance/<mentor_uuid>', methods=['POST'])
 def get_attendance(mentor_uuid):
     data = request.form
-    print(data)
     school_dir = os.path.join('assets', mentor_uuid, data['schoolName'], 'metadata.json')
     with open(school_dir, 'r') as f:
         school_metadata = json.load(f)
@@ -179,7 +178,6 @@ def get_class_data(mentor_uuid):
 @app.route('/screenshots/<mentor_uuid>', methods=['POST'])
 def get_screenshots(mentor_uuid):
     data = request.json
-    print(data)
     school_dir = os.path.join('assets', mentor_uuid, data['school_name'], 'metadata.json')
     with open(school_dir, 'r') as f:
         metadata = json.load(f)
@@ -198,7 +196,7 @@ def get_class_report(mentor_uuid):
     school_dir = os.path.join('assets', mentor_uuid, data['school_name'], 'metadata.json')
     with open(school_dir, 'r') as f:
         metadata = json.load(f)
-    doc = Document('ClassReport_Empty.docx')
+    doc = Document('ClassReport_empty.docx')
     doc.tables[0].rows[0].cells[2].paragraphs[0].text = ''
     run = doc.tables[0].rows[0].cells[2].paragraphs[0].add_run(metadata['school_name'])
     run.font.size = Pt(12)
@@ -267,7 +265,6 @@ def student_login():
     elif request.method == 'POST':
         data = request.json
         args = request.args
-        print(data)
         mentor_uuid = args['mentor_code']
         school_uuid = args['school_code']
         with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
@@ -302,7 +299,6 @@ def student_login():
 def register_student():
     data = request.form
     args = request.args
-    print(data)
     mentor_uuid = args['mentor_code']
     school_uuid = args['school_code']
     with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
@@ -587,7 +583,7 @@ def export_self_eval():
 def delete_student():
     mentor_uuid = request.args['mentor_code']
     school_uuid = request.args['school_code']
-    student_num = str(request.json['student_num'])
+    student_num = request.json['student_num']
     with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
         school_ids = json.load(f)
     school_name = school_ids["uuid_school"][school_uuid]
@@ -603,7 +599,7 @@ def delete_student():
             break
 
     for k in list(metadata['attendance'].keys()):
-        if str(student_num) in k:
+        if student_num in k:
             print(k)
             metadata['attendance'].pop(k)
 
@@ -619,7 +615,7 @@ def delete_student():
 def add_student():
     mentor_uuid = request.args['mentor_code']
     school_uuid = request.args['school_code']
-    student_num = str(request.json['student_num'])
+    student_num = request.json['student_num']
     student_name = request.json['student_name']
 
     with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
