@@ -165,9 +165,11 @@
     </select>
     <button id="newReportButton" onclick="addNewReport()">새 보고서 만들기</button>
     <button id="clearButton" onclick="clearEditor()">입력창 초기화</button>
+    <button id="delReportButton" onclick="deleteReport()">현재 보고서 삭제하기</button><br>
     <strong>전체 글자 수(제목 제외) : <span id="totalChar"></span> 글자</strong>
 <div id="editor"></div>
-<div>자
+<div>
+    <button onclick="createCell('h1')">I. / 수준 1</button>
     <button onclick="createCell('h2')">1. / 수준 2</button>
     <button onclick="createCell('h3')">가. / 수준 3</button>
     <button onclick="createCell('h4')">1) / 수준 4</button>
@@ -709,6 +711,7 @@ function downloadJson() {
                 response.files.forEach(file => {
                     dropdown.innerHTML += `<option>${file}</option>`;
                 });
+                getCurrentReport();
         })
 
     }
@@ -724,7 +727,8 @@ function downloadJson() {
                     editor.innerHTML = '';
                     cells = [];
                     document.getElementById('reportMetadata').reset();
-                    if (response.message === "Success") {
+                    document.getElementById('totalChar').innerText = '0';
+                    if (response.message === "Success" && response.data.metadata != undefined) {
                         Object.keys(response.data.metadata).forEach(key => {
                             document.getElementById(key).value = response.data.metadata[key];
                         });
@@ -737,7 +741,7 @@ function downloadJson() {
                         });
                         document.getElementById('exportButton').style.display= 'block';
                     } else {
-                        updateDropdown();
+                        //updateDropdown();
                         document.getElementById('exportButton').style.display= 'none';
                     }
                 })
@@ -816,6 +820,26 @@ function downloadJson() {
            }
         });
         document.getElementById('totalChar').innerText = totalCharCounter;
+    }
+
+    function deleteReport() {
+        const data = {
+            report_name: fileNameInput.value
+        }
+        let yay = confirm("정말 " + fileNameInput.value + " 보고서를 삭제하시겠습니까?");
+        if (yay) {
+            fetch('/delete_report' + queryString, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+        }).then(response => response.json())
+            .then(response => {
+                alert(response.message);
+                updateDropdown();
+            })
+        }
     }
 
     updateStudentList();

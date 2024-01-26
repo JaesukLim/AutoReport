@@ -639,5 +639,16 @@ def add_student():
 
     return jsonify({"message": "성공적으로 저장되었습니다!"})
 
+@app.route('/delete_report', methods=['POST'])
+def delete_report():
+    mentor_uuid = request.args['mentor_code']
+    school_uuid = request.args['school_code']
+    report_name = request.json['report_name']
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+    os.remove(os.path.join('assets', mentor_uuid, school_name, 'mentor_' + report_name + '.json'))
+    return jsonify({"message" : "삭제되었습니다!"})
+
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5002, debug=False)
