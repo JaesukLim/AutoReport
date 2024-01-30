@@ -138,6 +138,12 @@
     <textarea id="self-eval" rows="10" cols="80" placeholder="자기활동평가서 작성 칸">
     </textarea><br>
     <button id="submitSelfEvalButton" onclick="submitEval()">자기활동평가서 저장하기</button>
+    <br><br>
+    <form id="fileForm" enctype="multipart/form-data">
+        <input type="file" id="fileSubmission1" name="file1"><br>
+        <input type="file" id="fileSubmission2" name="file2"><br>
+        <input type="submit" id="fileSubmitButton" value="파일 제출하기">
+    </form>
 </div>
 </div>
 
@@ -159,6 +165,9 @@
     let query_string = '?mentor_code=' + mentor_code + '&school_code=' + school_code + '&student_code=' + student_code;
     let isReport = true;
     let totalCharCounter = 0;
+
+    document.getElementById("fileForm").action = '/file_submit' + query_string;
+    document.getElementById("fileForm").method = 'POST'
 
     function updateTotalChar() {
         totalCharCounter = 0;
@@ -568,6 +577,16 @@ function submitReport() {
         textarea.style.height = (textarea.scrollHeight + 2) + 'px'; // Set the height based on content
     }
 
+    document.getElementById('fileForm').addEventListener('submit', function (event) {
+        event.preventDefault();
+            fetch(event.target.action, {
+                method: 'POST',
+                body: new FormData(event.target)
+            }).then(response => response.json())
+            .then(response => {
+                alert(response.message);
+        })
+    })
     loadJson();
 
 

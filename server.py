@@ -630,12 +630,14 @@ def add_student():
                                             "final_report_char": 0,
                                             "self_evaluation": "No",
                                             "self_evaluation_revised": "No",
-                                            "password": ""}
+                                            "password": "",
+                                            "file1": "No",
+                                            "file2": "No"}
     temp_uuid = str(uuid.uuid4())[:8]
     metadata['student_num_uuid'][student_num] = temp_uuid
     metadata['uuid_student_num'][temp_uuid] = student_num
     with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'w') as f:
-        metadata = json.dump(metadata, f)
+        json.dump(metadata, f)
 
     return jsonify({"message": "성공적으로 저장되었습니다!"})
 
@@ -649,6 +651,49 @@ def delete_report():
     school_name = school_ids["uuid_school"][school_uuid]
     os.remove(os.path.join('assets', mentor_uuid, school_name, 'mentor_' + report_name + '.json'))
     return jsonify({"message" : "삭제되었습니다!"})
+
+@app.route('/file_submit', methods=['POST'])
+def file_submission():
+    mentor_uuid = request.args['mentor_code']
+    school_uuid = request.args['school_code']
+    student_uuid = request.args['student_code']
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+        metadata = json.load(f)
+
+    student_num = metadata['uuid_student_num'][student_uuid]
+    data = request.files
+    f1 = data['file1']
+    f2 = data['file2']
+    if f1.filename != '':
+        if metadata['report_status'][student_num]['file1'] != "No":
+            os.remove(metadata['report_status'][student_num]['file1'])
+        f1.save(os.path.join('assets', mentor_uuid, school_name, student_num + '_file1_' + f1.filename))
+        metadata['report_status'][student_num]['file1'] = os.path.join('assets', mentor_uuid, school_name, student_num + '_file1_' + f1.filename)
+    if f2.filename != '':
+        if metadata['report_status'][student_num]['file2'] != "No":
+            os.remove(metadata['report_status'][student_num]['file2'])
+        f2.save(os.path.join('assets', mentor_uuid, school_name, student_num + '_file2_' + f2.filename))
+        metadata['report_status'][student_num]['file2'] = os.path.join('assets', mentor_uuid, school_name, student_num + '_file2_' + f2.filename)
+
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'w') as f:
+        json.dump(metadata, f)
+    return jsonify({"message": "성공적으로 저장되었습니다!"})
+
+@app.route('/download_student_file', methods=['POST'])
+def download_student_file():
+    mentor_uuid = request.args['mentor_code']
+    school_uuid = request.args['school_code']
+    student_num = request.json['student_num']
+    file_num = request.json['file_num']
+    with open(os.path.join('assets', mentor_uuid, 'school_ids.json'), 'r') as f:
+        school_ids = json.load(f)
+    school_name = school_ids["uuid_school"][school_uuid]
+    with open(os.path.join('assets', mentor_uuid, school_name, 'metadata.json'), 'r') as f:
+        metadata = json.load(f)
+    return send_file(metadata['report_status'][student_num]['file' + str(file_num)], as_attachment=True)
 
 if __name__ == "__main__":
     app.run(host='0.0.0.0', port=5002, debug=False)

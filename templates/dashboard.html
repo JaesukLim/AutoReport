@@ -500,6 +500,8 @@
                             <th>자기활동평가서</th>
                             <th>자기활동평가서 수정(멘토)</th>
                             <th></th>
+                            <th>파일 1</th>
+                            <th>파일 2</th>
                             `;
                 // Add columns for each class session (1차시 to 9차시)
                 for (let i = 1; i <= 9; i++) {
@@ -533,6 +535,8 @@
                         <td id="isSelfEval-${studentNumber}"></td>
                         <td id="isSelfEvalRev-${studentNumber}"></td>
                         <td><button id="revButton-${studentNumber}" onclick="viewRev('${studentNumber}', '${studentName}')">자기활동평가서 수정하기</button></td>
+                        <td id="file1-${studentNumber}"></td>
+                        <td id="file2-${studentNumber}"></td>
                         `;
                     // Add columns for each class session with radio boxes and dropdowns
                     for (let i = 1; i <= 9; i++) {
@@ -608,6 +612,12 @@
                             document.getElementById('finalReportChar-' + key).innerText = response.report_status[key]['final_report_char'];
                             document.getElementById('isSelfEval-' + key).innerText = response.report_status[key]['self_evaluation'];
                             document.getElementById('isSelfEvalRev-' + key).innerText = response.report_status[key]['self_evaluation_revised'];
+                            if (response.report_status[key]['file1'] !== "No") {
+                                document.getElementById('file1-' + key).innerHTML = `<button id="file1DownLoadButton" title="${response.report_status[key]['file1'].split('/')[3]}" onclick="downloadStudentFile('${key}', 1)">다운로드</button>`
+                            }
+                            if (response.report_status[key]['file2'] !== "No") {
+                                document.getElementById('file2-' + key).innerHTML = `<button id="file2DownLoadButton" title="${response.report_status[key]['file2'].split('/')[3]}" onclick="downloadStudentFile('${key}', 2)">다운로드</button>`
+                            }
                         })
                     }
                 })
@@ -971,6 +981,36 @@ document.onpaste = function(pasteEvent) {
                 document.getElementById('totalCharMentor').innerText = event.target.value.length;
             }
         })
+
+        function downloadStudentFile(student_num, file_num) {
+            const data = {
+                student_num: student_num,
+                file_num: file_num
+            }
+            fetch('/download_student_file' + '?mentor_code=' + uuid + '&school_code=' + school_id, {
+                method: 'POST',
+                headers: {
+                    "Content-Type": 'application/json'
+                },
+                body: JSON.stringify(data)
+            }).then(response => {
+                const contentDisposition = response.headers.get('Content-Disposition');
+                    const filename = getFileNameFromHeader(contentDisposition);
+
+                    if (!filename) {
+                        throw new Error('Filename not found in Content-Disposition header');
+                    }
+                    // Create a link element
+                    response.blob().then(blob => {
+                        const link = document.createElement('a');
+                        link.href = window.URL.createObjectURL(blob);
+                        link.download = filename;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                    });
+            })
+        }
         // Initial fetch when the page loads (you may want to call this with a specific mentor value)
         fetchSchools();
     </script>
