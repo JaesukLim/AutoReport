@@ -16,10 +16,9 @@
 
         #sidebar {
             width: 180px;
-            height: 80vh;
+            height: 100vh;
             background-color: #f1f1f1;
             padding: 20px;
-
         }
 
         #content {
@@ -154,6 +153,25 @@
             margin: 10px;
             background: lightgray;
         }
+
+        #layer-bg {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            justify-content: center;
+            align-items: center;
+        }
+
+        #add-students-popup {
+            display: none;
+            background-color: #fff;
+            padding: 20px;
+            border-radius: 5px;
+        }
     </style>
 </head>
 <body>
@@ -162,6 +180,22 @@
         <button class="add-school-btn" onclick="showAddSchoolForm()">Add School</button>
     </div>
     <div id="content">
+        <div id="layer-bg">
+            <div id="add-students-popup">
+                <h2> 추가할 학생을 입력하세요 </h2>
+                <form id="studentForm">
+                    <div id="student-list">
+
+                    </div>
+                    <button type="button" class="add-student-btn" onclick="addStudentField()">새 학생 만들기</button>
+                    <button type="button" class="del-btn" onclick="deleteField()">마지막 줄 삭제</button>
+                    <br>
+                    <button type="submit" class="ui-btn">저장하기</button>
+                    <button type="button" class="del-btn" onclick="hideAddStudentPopup()">닫기</button>
+                </form>
+
+            </div>
+        </div>
         <div id="add-school-form">
             <form id="school-form" method="post" onsubmit="submitForm(event)">
                 <label for="school-name">학교명:</label>
@@ -170,11 +204,11 @@
                 <label for="field">분야:</label>
                 <input type="text" id="field" name="field" required>
                 <br>
-                <div id="student-list" class="add-student-form">
-                    <!-- Dynamic input fields for students will be added here -->
-                </div>
-                <button type="button" class="add-student-btn" onclick="addStudentField()">Add Student</button>
-                <br>
+{#                <div id="student-list" class="add-student-form">#}
+{#                    <!-- Dynamic input fields for students will be added here -->#}
+{#                </div>#}
+{#                <button type="button" class="add-student-btn" onclick="addStudentField()">Add Student</button>#}
+{#                <br>#}
                 <input class="save-btn" type="submit" value="Submit">
             </form>
         </div>
@@ -261,7 +295,7 @@
                 </section>
 
                 <section id="attendanceSection">
-                    <h2>출결 현황 <button class="ui-btn" id="newStudentButton" onclick="addStudent()">학생 추가하기</button></h2>
+                    <h2>출결 현황 <button class="ui-btn" id="newStudentButton" onclick="showAddStudentPopup()">학생 추가하기</button></h2>
                     <form id="AttendanceForm" method="post">
 
                         <input type="hidden" id="schoolNameAttendance" name="schoolName">
@@ -426,6 +460,7 @@
         function addStudentField() {
             const studentList = document.getElementById('student-list');
             const studentInput = document.createElement('div');
+            studentInput.id = 'student-' + studentCounter.toString();
             studentInput.innerHTML = `
                 <label for="student-number-${studentCounter}">학번:</label>
                 <input type="text" name="student-number-${studentCounter}" required>
@@ -434,6 +469,12 @@
             `;
             studentList.appendChild(studentInput);
             studentCounter++;
+        }
+
+        function deleteField() {
+            const studentList = document.getElementById('student-list');
+            const studentInput = document.getElementById('student-' + (--studentCounter).toString());
+            studentList.removeChild(studentInput);
         }
 
         async function submitForm(event) {
@@ -574,6 +615,7 @@
                 .then(response => {
                     selectedImages = {};
                     school_id = response['school_id']
+                    document.getElementById('studentForm').action = '/add_student?mentor_code=' + uuid + '&school_code=' + school_id;
                     document.getElementById('studentRegisterLink').innerText = window.location.origin + '/student_login?mentor_code=' + uuid + '&school_code=' + school_id;
                     for (let i = 1; i <= 10; i++) {
                         document.getElementById(`preview${i}`).innerHTML = '';
@@ -626,7 +668,7 @@
         document.addEventListener('submit', function(event) {
             event.preventDefault();
             alert('저장 완료!');
-            console.log("YOLO!");
+            console.log(event.target.action);
             fetch(event.target.action, {
                 method: 'POST',
                 body: new FormData(event.target)
@@ -771,18 +813,51 @@ document.onpaste = function(pasteEvent) {
             delete selectedImages[`${cell}`];
         }
 
-        function exportToDocx() {
+        async function exportToDocx() {
             const name = prompt("파일 이름을 입력해주세요 (확장자 제외)");
             if (!name) {
-                alert('File name cannot be empty.');
+                alert('파일 이름을 입력해주세요!');
                 return;
             }
             const exportForm = document.getElementById('exportForm');
             exportForm.action = '/export/' + uuid;
             document.getElementById('schoolNameExport').value = document.getElementById('schoolName').value;
             document.getElementById('fileNameExport').value = name;
-            exportForm.submit();
+            const response = await fetch(exportForm.action, {
+                method: 'POST',
+                body: new FormData(exportForm)
+            })
+
+            const contentType = response.headers.get('content-type');
+            if (contentType && contentType.includes('application/json')) {
+                const jsonData = await response.json();
+                alert(jsonData.message);
+            } else if (contentType && contentType.includes('application/octet-stream')) {
+                const contentDisposition = response.headers.get('Content-Disposition');
+                const filename = getFileNameFromHeader(contentDisposition);
+
+                if (!filename) {
+                    throw new Error('Filename not found in Content-Disposition header');
+                }
+                // Create a link element
+                const blob = await response.blob();
+
+                const link = document.createElement('a');
+                link.href = window.URL.createObjectURL(blob);
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+
+                }
+
         }
+
+        document.getElementById('exportForm').addEventListener("submit", function (event) {
+            event.preventDefault();
+            alert("Good");
+
+        })
 
         function deleteSchool() {
             let school_name = document.getElementById('schoolName').value;
@@ -959,22 +1034,11 @@ document.onpaste = function(pasteEvent) {
 
         }
 
-        function addStudent() {
-            let studentNumber = prompt("추가할 학생의 학번을 입력해주세요");
-            let studentName = prompt("추가할 학생의 이름을 입력해주세요");
-            const queryString = '?mentor_code=' + uuid + '&school_code=' + school_id;
-                fetch('/add_student' + queryString, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify({"student_num": studentNumber, "student_name": studentName})
-                }).then(response => response.json())
-                    .then(response => {
-                        alert(response.message);
-                        window.location.reload();
-                    })
-        }
+
+        document.getElementById('studentForm').addEventListener("submit", function (event) {
+            window.location.reload();
+            hideAddStudentPopup();
+        })
 
         document.addEventListener('input', function (event) {
             if (event.target.id === 'self-eval-rev') {
@@ -1011,6 +1075,17 @@ document.onpaste = function(pasteEvent) {
                     });
             })
         }
+
+        function showAddStudentPopup() {
+            document.getElementById('layer-bg').style.display = 'flex';
+            document.getElementById('add-students-popup').style.display = 'block';
+        }
+
+        function hideAddStudentPopup() {
+            document.getElementById('layer-bg').style.display = 'none';
+            document.getElementById('add-students-popup').style.display = 'none';
+        }
+
         // Initial fetch when the page loads (you may want to call this with a specific mentor value)
         fetchSchools();
     </script>
